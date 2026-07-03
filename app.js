@@ -10,6 +10,7 @@ const path = require("path");
 const http = require("http");
 const { WebSocketServer } = require("ws");
 const session = require("express-session");
+const MongoStore = require('connect-mongo');
 const cookieParser = require("cookie-parser");
 const { v4: uuidv4 } = require("uuid");
 const QRCode = require('qrcode');
@@ -178,19 +179,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.use(
-  session({
+// ==========================================
+// EXPRESS SESSION CONFIGURATION (FIXED FOR PRODUCTION)
+// ==========================================
+app.use(session({
     secret: process.env.SESSION_SECRET || "pos_hub_secure_secret_crypto_key_2026",
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 1000 * 60 * 60 * 8,
-      httpOnly: true,
-      sameSite: 'lax'
-    },
-  }),
-);
+    store: MongoStore.create({
+        mongoUrl: MONGODB_URI, 
+        ttl: 14 * 24 * 60 * 60 // সেশন 14 দিন পরে এক্সপায়ার হবে
+    }),
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production', 
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: 'lax' // সেশন হাইজ্যাকিং প্রতিরোধে SameSite কুকি পলিসি
+    }
+}));
 
 // Cache control headers
 app.use((req, res, next) => {
