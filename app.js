@@ -14,6 +14,7 @@ const cookieParser = require("cookie-parser");
 const { v4: uuidv4 } = require("uuid");
 const QRCode = require('qrcode');
 const mongoose = require("mongoose");
+const MongoStore = require('connect-mongo');
 
 const app = express();
 const PORT = process.env.PORT || 8000; 
