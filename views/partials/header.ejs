@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BAGNEST.com</title>
+    
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+  
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <style>
+       
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", system-ui, sans-serif;
+            margin: 0;
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+      
+        .main-navbar {
+            background: linear-gradient(135deg, #2d3748 0%, #2d3748 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 100%;
+        }
+
+        /* Logo  */
+        .nav-brand-container {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .header-logo {
+            height: 45px;
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .nav-brand {
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            -webkit-background-clip: text;
+            background-clip: text;                
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+        }
+
+        /* Search Box - ছোট */
+        .header-search-box {
+            flex: 0 1 280px;
+            max-width: 280px;
+            min-width: 160px;
+            display: flex;
+            position: relative;
+            margin: 0 10px;
+        }
+
+        .header-search-box input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-radius: 50px;
+            color: #fff;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .header-search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+        }
+
+        .header-search-box input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #f39c12;
+            box-shadow: 0 0 20px rgba(243, 156, 18, 0.2);
+        }
+
+        .search-icon-placeholder {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+            font-size: 0.8rem;
+        }
+
+      
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .nav-links a:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-links a i {
+            font-size: 0.85rem;
+        }
+
+    
+        .nav-cart-link {
+            background: rgba(243, 156, 18, 0.2);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+            position: relative;
+            padding: 6px 14px !important;
+            border-radius: 50px;
+        }
+
+        .nav-cart-link:hover {
+            background: rgba(243, 156, 18, 0.3) !important;
+        }
+
+        .nav-cart-link .cart-badge {
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            padding: 1px 6px;
+            font-size: 0.6rem;
+            font-weight: bold;
+            min-width: 18px;
+            text-align: center;
+            display: inline-block;
+            margin-left: 2px;
+            animation: pulse-badge 2s infinite;
+        }
+
+        .nav-cart-link .cart-badge.zero {
+            background: #718096;
+            animation: none;
+        }
+
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .nav-cart-link .cart-text {
+            display: inline;
+        }
+
+        /* Super Admin Badge */
+        .super-admin-badge {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 0.55rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 4px;
+            display: inline-block;
+        }
+
+      
+        .btn-login {
+            background: linear-gradient(45deg, #f39c12, #e67e22) !important;
+            color: white !important;
+            font-weight: 600 !important;
+            padding: 6px 16px !important;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(243, 156, 18, 0.4) !important;
+        }
+
+        .btn-logout {
+            background: #e53e3e !important;
+            color: white !important;
+            padding: 6px 14px !important;
+        }
+
+        .btn-logout:hover {
+            background: #c0392b !important;
+        }
+
+    
+        .user-name-display {
+            color: #f39c12;
+            font-weight: 600;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+        }
+
+     
+        .guest-cart-banner {
+            background: #ebf8ff;
+            padding: 6px 20px;
+            text-align: center;
+            border-bottom: 1px solid #bee3f8;
+            font-size: 0.85rem;
+            color: #2a69ac;
+        }
+
+        .guest-cart-banner a {
+            color: #2b6cb0;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .guest-cart-banner a:hover {
+            text-decoration: underline;
+        }
+
+     
+        #notificationContainer {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .notification {
+            padding: 14px 20px;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 500;
+            animation: slideIn 0.5s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notification-success { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .notification-info { background: linear-gradient(135deg, #2980b9, #3498db); }
+        .notification-warning { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .notification-error { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+     
+        @media (max-width: 768px) {
+            .main-navbar {
+                padding: 10px 15px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .nav-brand-container {
+                justify-content: center;
+            }
+
+            .header-search-box {
+                flex: 1;
+                max-width: 100%;
+                min-width: unset;
+                margin: 0;
+                order: 3;
+            }
+
+            .nav-links {
+                justify-content: center;
+                gap: 4px;
+                flex: 0 1 auto;
+            }
+
+            .nav-links a {
+                padding: 4px 10px;
+                font-size: 0.75rem;
+            }
+
+            .nav-cart-link .cart-text {
+                display: none;
+            }
+
+            .nav-brand {
+                font-size: 1.1rem;
+            }
+
+            .header-logo {
+                height: 35px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-links a {
+                padding: 3px 8px;
+                font-size: 0.65rem;
+            }
+            
+            .nav-links a i {
+                font-size: 0.7rem;
+            }
+            
+            .nav-cart-link {
+                padding: 3px 10px !important;
+            }
+            
+            .header-search-box input {
+                padding: 6px 10px 6px 30px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+ 
+    <nav class="main-navbar">
+       
+        <a href="/" class="nav-brand-container">
+            <img src="/uploads/logo.png" alt="BAGNEST Logo" class="header-logo" />
+            <span class="nav-brand">BAGNEST</span>
+        </a>
+
+    
+        <div class="header-search-box">
+            <span class="search-icon-placeholder">🔍</span>
+            <input type="text" id="globalProductSearch" placeholder="Search..." autocomplete="off" />
+        </div>
+
+     
+        <ul class="nav-links">
+            <!-- Home -->
+            <li>
+                <a href="/">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </li>
+
+          
+            <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.role === 'authorized_cashier' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
+                <li>
+                    <a href="/terminal">
+                        <i class="fas fa-cash-register"></i> Terminal
+                    </a>
+                </li>
+            <% } %>
+
+           
+            <% if (typeof user !== 'undefined' && user) { %>
+                <li>
+                    <a href="/my-orders">
+                        <i class="fas fa-box"></i> My Orders
+                    </a>
+                </li>
+            <% } %>
+
+          
+            <li>
+                <a href="/cart" class="nav-cart-link" id="cartLink">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-text">Cart</span>
+                    <span class="cart-badge zero" id="cartCount">0</span>
+                </a>
+            </li>
+
+          
+            <% if (typeof user !== 'undefined' && user && (user.username === 'superadmin' || user.isSuperAdmin === true)) { %>
+                <li>
+                    <a href="/superadmin/dashboard" style="background: linear-gradient(45deg, #f39c12, #e67e22); color: white; font-weight: 700; border-radius: 50px; padding: 4px 14px; font-size: 0.75rem;">
+                        <i class="fas fa-crown"></i> Super
+                    </a>
+                </li>
+            <% } %>
+
+           
+            <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
+                <li>
+                    <a href="/admin/orders">
+                        <i class="fas fa-clipboard-list"></i> Order Management
+                    </a>
+                </li>
+            <% } %>
+
+       
+            <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
+                <li>
+                    <a href="/admin/inventory">
+                        <i class="fas fa-warehouse"></i> Inventory
+                    </a>
+                </li>
+                <li>
+                    <a href="/sales">
+                        <i class="fas fa-chart-bar"></i> Sales
+                    </a>
+                </li>
+                <li><a href="/admin/stock-report" class="nav-link">
+    <i class="fas fa-boxes"></i> Stock Report
+</a></li>
+                <li>
+                    
+                    <a href="/admin/users">
+                        <i class="fas fa-users"></i> Users
+                    </a>
+                </li>
+            <% } %>
+
+            <% if (typeof user !== 'undefined' && user && (user.username === 'superadmin' || user.isSuperAdmin === true)) { %>
+                <li>
+                    <a href="/superadmin/admins">
+                        <i class="fas fa-user-shield"></i> Admins
+                    </a>
+                </li>
+            <% } %>
+
+        
+            <% if (typeof user !== 'undefined' && user) { %>
+                <li>
+                    <a href="/profile" class="user-name-display">
+                        <i class="fas fa-user-circle"></i> <%= user.username %>
+                        <% if (user.isSuperAdmin === true || user.username === 'superadmin') { %>
+                            <span class="super-admin-badge">Super</span>
+                        <% } %>
+                    </a>
+                </li>
+                <li>
+                    <a href="/logout" class="btn-logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </li>
+            <% } else { %>
+                <li>
+                    <a href="/login" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                </li>
+            <% } %>
+        </ul>
+    </nav>
+
+
+    <% if (typeof user === 'undefined' || !user) { %>
+        <div class="guest-cart-banner">
+            <i class="fas fa-shopping-cart"></i>
+            You have <strong id="guestCartCount">0</strong> items in your cart.
+            <a href="/login">Login to Checkout <i class="fas fa-arrow-right"></i></a>
+        </div>
+    <% } %>
+
+
+    <div id="notificationContainer"></div>
+
+
+    <script>
+        $(document).ready(function() {
+
+         
+            $('#globalProductSearch').on('keyup', function() {
+                var searchString = $(this).val().toLowerCase().trim();
+
+               
+                $('.log-container table tbody tr').filter(function() {
+                    var receiptCode = $(this).find('td:nth-child(1)').text().toLowerCase();
+                    var productName = $(this).find('td:nth-child(3)').text().toLowerCase();
+                    var isMatch = (receiptCode.indexOf(searchString) > -1) || (productName.indexOf(searchString) > -1);
+                    $(this).toggle(isMatch);
+                });
+
+               
+                $('.home-catalog-grid .home-card').filter(function() {
+                    var productNameText = $(this).find('strong').text().toLowerCase();
+                    $(this).toggle(productNameText.indexOf(searchString) > -1);
+                });
+
+                $('.product-grid .card').filter(function() {
+                    var terminalItemText = $(this).find('strong').text().toLowerCase();
+                    $(this).toggle(terminalItemText.indexOf(searchString) > -1);
+                });
+
+               
+                $('.admin-inventory-grid .card').filter(function() {
+                    var catalogItemText = $(this).find('.card-body strong').text().toLowerCase();
+                    $(this).toggle(catalogItemText.indexOf(searchString) > -1);
+                });
+            });
+
+           
+            window.updateCartCount = function() {
+                $.ajax({
+                    url: '/api/cart/view',
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            var count = response.count || 0;
+                            var $badge = $('#cartCount');
+                            $badge.text(count);
+                            
+                           
+                            $('#guestCartCount').text(count);
+
+                            if (count === 0) {
+                                $badge.addClass('zero');
+                            } else {
+                                $badge.removeClass('zero');
+                            }
+                        }
+                    },
+                    error: function() {
+                        console.log('Cart count update failed');
+                    }
+                });
+            };
+
+          
+            window.showNotification = function(message, type, icon) {
+                var container = $('#notificationContainer');
+                var icons = {
+                    success: 'fa-check-circle',
+                    info: 'fa-info-circle',
+                    warning: 'fa-exclamation-triangle',
+                    error: 'fa-times-circle'
+                };
+                var notification = $(
+                    '<div class="notification notification-' + type + '">' +
+                        '<i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i>' +
+                        '<span>' + message + '</span>' +
+                    '</div>'
+                );
+                container.append(notification);
+                setTimeout(function() {
+                    notification.fadeOut(300, function() { $(this).remove(); });
+                }, 3000);
+            };
+
+          
+            if (typeof updateCartCount === 'function') {
+                updateCartCount();
+            }
+
+            console.log('✅ Header Loaded with Cart Badge!');
+        });
+    </script>
+
+</body>
+</html>
