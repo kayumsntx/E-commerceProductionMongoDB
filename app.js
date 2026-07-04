@@ -202,6 +202,8 @@ app.use(cookieParser());
 const isProduction = process.env.NODE_ENV === 'production';
 console.log('🔒 Session config - Production mode:', isProduction);
 
+
+app.set('trust proxy', 1);
 app.use(session({
     secret: process.env.SESSION_SECRET || "pos_hub_secure_secret_crypto_key_2026",
     resave: false,
