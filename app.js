@@ -30,7 +30,7 @@ const wsClients = new Map();
 
 
 // ==========================================
-// DEBUG LOGGING - লগইন ইস্যু চেক করতে
+// DEBUG LOGGING
 // ==========================================
 console.log('🚀 Starting BAGNEST application...');
 console.log('📡 NODE_ENV:', process.env.NODE_ENV);
@@ -38,16 +38,11 @@ console.log('📡 PORT:', process.env.PORT || 8000);
 console.log('📡 MONGODB_URI exists:', !!process.env.MONGODB_URI);
 
 // ==========================================
-// MONGODB CONNECTION (Production Ready - FIXED)
+// MONGODB CONNECTION
 // ==========================================
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/bagnest_db";
 
 console.log('🔗 Connecting to MongoDB...');
-if (MONGODB_URI.includes('@')) {
-    console.log('📡 Using URI with authentication');
-} else {
-    console.log('📡 Using local MongoDB URI');
-}
 
 mongoose.connect(MONGODB_URI, {
     serverSelectionTimeoutMS: 10000,
@@ -60,7 +55,6 @@ mongoose.connect(MONGODB_URI, {
 .catch(err => {
     console.error("❌ MongoDB connection error:", err);
     console.log("⚠️ Please check your MONGODB_URI in .env file");
-    console.log("💡 Make sure MongoDB Atlas IP whitelist includes 0.0.0.0/0");
 });
 
 mongoose.connection.on('disconnected', () => {
@@ -203,7 +197,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ==========================================
-// EXPRESS SESSION CONFIGURATION (FIXED)
+// EXPRESS SESSION CONFIGURATION
 // ==========================================
 const isProduction = process.env.NODE_ENV === 'production';
 console.log('🔒 Session config - Production mode:', isProduction);
@@ -225,15 +219,6 @@ app.use(session({
     },
     name: 'bagnest.sid'
 }));
-
-// Session ডিবাগ মিডলওয়্যার
-app.use((req, res, next) => {
-    if (req.session && req.session.id) {
-        console.log('🔑 Session ID:', req.session.id);
-        console.log('👤 User in session:', req.session.user ? req.session.user.username : 'No user');
-    }
-    next();
-});
 
 // Cache control headers
 app.use((req, res, next) => {
@@ -498,7 +483,7 @@ async function loadUserCart(req, user) {
     }
 }
 
-// ENSURE SUPER ADMIN (ONLY FROM .env - NO DEFAULT)
+// ENSURE SUPER ADMIN
 async function ensureSuperAdmin() {
     try {
         console.log('🔐 Checking for Super Admin...');
@@ -507,13 +492,11 @@ async function ensureSuperAdmin() {
         if (!superAdmin) {
             console.log('🔐 No Super Admin found. Creating...');
             
-            // ONLY from .env - NO DEFAULT password
             const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD;
             
             if (!superAdminPassword) {
                 console.error('❌ SUPER_ADMIN_PASSWORD not found in environment!');
                 console.error('⚠️ Please set SUPER_ADMIN_PASSWORD in Render Environment Variables');
-                console.error('⚠️ Super Admin account will NOT be created!');
                 return;
             }
             
@@ -539,14 +522,12 @@ async function ensureSuperAdmin() {
             console.log('✅ Super Admin created successfully!');
             console.log('📧 Username: superadmin');
             console.log('🔑 Password: From environment variables');
-            console.log('⚠️ PLEASE CHANGE PASSWORD AFTER FIRST LOGIN!');
         } else {
             console.log('✅ Super Admin already exists');
             console.log('📧 Username: superadmin');
         }
     } catch (error) {
         console.error('❌ Error creating Super Admin:', error.message);
-        console.error('❌ Error stack:', error.stack);
     }
 }
 
@@ -632,10 +613,11 @@ const broadcastRefresh = (data = {}) => {
 };
 
 
+// ==========================================
 // ROUTES
+// ==========================================
 
-
-// ---------- TEST ROUTES (ডিবাগিং) ----------
+// ---------- TEST ROUTES ----------
 app.get("/test-db", async (req, res) => {
     try {
         const userCount = await User.countDocuments();
@@ -660,9 +642,9 @@ app.get("/test-db", async (req, res) => {
 
 app.get("/test-session", (req, res) => {
     res.json({
-        sessionID: req.session.id,
-        user: req.session.user || null,
-        cookie: req.session.cookie
+        sessionID: req.session?.id || 'No session',
+        user: req.session?.user || null,
+        isLoggedIn: !!req.session?.user
     });
 });
 
@@ -728,9 +710,11 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ---------- LOGIN (COMPLETELY FIXED) ----------
+// ==========================================
+// LOGIN - COMPLETELY REWRITTEN
+// ==========================================
 app.get("/login", (req, res) => {
-    console.log('🔐 Login page requested');
+    console.log('🔐 GET /login called');
     const redirect = req.query.redirect || null;
     res.render("login", { 
         error: null, 
@@ -741,14 +725,15 @@ app.get("/login", (req, res) => {
 
 app.post("/login", async (req, res) => {
     console.log('========================================');
-    console.log('🔐 LOGIN ATTEMPT');
+    console.log('🔐 POST /login called');
     console.log('========================================');
     
     const { username, password, redirect } = req.body;
     
-    console.log('📝 Username:', username);
-    console.log('📝 Password length:', password?.length || 0);
+    console.log('📝 Username received:', username);
+    console.log('📝 Password received:', password ? '***' : 'empty');
     
+    // Validation
     if (!username || !password) {
         console.log('❌ Missing username or password');
         return res.render("login", {
@@ -759,14 +744,14 @@ app.post("/login", async (req, res) => {
     }
 
     try {
-        // Find user (case insensitive)
-        console.log('🔍 Searching for user...');
+        // Find user
+        console.log('🔍 Searching for user in database...');
         const matchingUser = await User.findOne({
             username: { $regex: new RegExp(`^${username.trim()}$`, "i") }
         });
 
         if (!matchingUser) {
-            console.log('❌ User not found:', username);
+            console.log('❌ No user found with username:', username);
             return res.render("login", {
                 error: "Invalid Username or Password.",
                 message: null,
@@ -775,11 +760,13 @@ app.post("/login", async (req, res) => {
         }
 
         console.log('✅ User found:', matchingUser.username);
-        console.log('🔑 Password match:', matchingUser.password === password);
+        console.log('🔑 Stored password:', matchingUser.password);
+        console.log('🔑 Provided password:', password);
+        console.log('🔑 Match result:', matchingUser.password === password);
 
-        // Check password (plain text)
+        // Check password
         if (matchingUser.password !== password) {
-            console.log('❌ Password mismatch');
+            console.log('❌ Password mismatch for:', matchingUser.username);
             return res.render("login", {
                 error: "Invalid Username or Password.",
                 message: null,
@@ -790,26 +777,23 @@ app.post("/login", async (req, res) => {
         console.log('✅ Password matched!');
 
         // Create session
-        const assignedRole = matchingUser.role || "user";
         const isSuperAdmin = matchingUser.username === 'superadmin' || 
                            (matchingUser.profile && matchingUser.profile.isSuperAdmin === true);
-
-        const userProfile = matchingUser.profile || {};
 
         req.session.user = {
             id: matchingUser.id,
             username: matchingUser.username,
-            role: assignedRole,
+            role: matchingUser.role || "user",
             loginTime: new Date(),
-            profile: userProfile,
+            profile: matchingUser.profile || {},
             isSuperAdmin: isSuperAdmin
         };
 
         console.log('👤 Session user set:', req.session.user.username);
         console.log('🔑 Session ID:', req.session.id);
 
-        // Save session explicitly
-        req.session.save(async (err) => {
+        // Save session
+        req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
                 return res.render("login", {
@@ -821,30 +805,10 @@ app.post("/login", async (req, res) => {
 
             console.log('✅ Session saved successfully');
 
-            // Load user cart
-            try {
-                await loadUserCart(req, matchingUser);
-                console.log('✅ Cart loaded');
-            } catch (cartErr) {
-                console.error('Cart load error:', cartErr);
-            }
-
-            // Create active order if cart has items
-            if (req.session.cart && req.session.cart.length > 0) {
-                try {
-                    await createOrUpdateActiveOrder(matchingUser, req.session.cart);
-                    console.log('✅ Active order created');
-                } catch (orderErr) {
-                    console.error('Active order error:', orderErr);
-                }
-            }
-
             // Determine redirect URL
             let redirectUrl = redirect || "/";
             if (isSuperAdmin) {
                 redirectUrl = "/superadmin/dashboard";
-            } else if (redirect === '/cart' || redirect === '/checkout') {
-                redirectUrl = redirect;
             }
 
             console.log('➡️ Redirecting to:', redirectUrl);
