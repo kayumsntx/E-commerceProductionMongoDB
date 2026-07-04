@@ -498,7 +498,7 @@ async function loadUserCart(req, user) {
     }
 }
 
-// ENSURE SUPER ADMIN (FIXED)
+// ENSURE SUPER ADMIN (ONLY FROM .env - NO DEFAULT)
 async function ensureSuperAdmin() {
     try {
         console.log('🔐 Checking for Super Admin...');
@@ -507,8 +507,17 @@ async function ensureSuperAdmin() {
         if (!superAdmin) {
             console.log('🔐 No Super Admin found. Creating...');
             
-            const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-            console.log('🔑 Super Admin password set to:', superAdminPassword);
+            // ONLY from .env - NO DEFAULT password
+            const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD;
+            
+            if (!superAdminPassword) {
+                console.error('❌ SUPER_ADMIN_PASSWORD not found in environment!');
+                console.error('⚠️ Please set SUPER_ADMIN_PASSWORD in Render Environment Variables');
+                console.error('⚠️ Super Admin account will NOT be created!');
+                return;
+            }
+            
+            console.log('✅ SUPER_ADMIN_PASSWORD found in environment');
             
             const newSuperAdmin = new User({
                 id: "USR-SUPER-ADMIN-" + Date.now(),
@@ -529,7 +538,7 @@ async function ensureSuperAdmin() {
             await newSuperAdmin.save();
             console.log('✅ Super Admin created successfully!');
             console.log('📧 Username: superadmin');
-            console.log('🔑 Password:', superAdminPassword);
+            console.log('🔑 Password: From environment variables');
             console.log('⚠️ PLEASE CHANGE PASSWORD AFTER FIRST LOGIN!');
         } else {
             console.log('✅ Super Admin already exists');
@@ -719,96 +728,136 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ---------- LOGIN (FIXED) ----------
+// ---------- LOGIN (COMPLETELY FIXED) ----------
 app.get("/login", (req, res) => {
     console.log('🔐 Login page requested');
-    res.render("login", { error: null, message: req.query.message || null });
+    const redirect = req.query.redirect || null;
+    res.render("login", { 
+        error: null, 
+        message: req.query.message || null,
+        redirect: redirect 
+    });
 });
 
 app.post("/login", async (req, res) => {
-    console.log('🔐 Login attempt received');
+    console.log('========================================');
+    console.log('🔐 LOGIN ATTEMPT');
+    console.log('========================================');
+    
     const { username, password, redirect } = req.body;
-    console.log('📝 Login attempt for username:', username);
+    
+    console.log('📝 Username:', username);
+    console.log('📝 Password length:', password?.length || 0);
     
     if (!username || !password) {
         console.log('❌ Missing username or password');
         return res.render("login", {
             error: "Username and password are required.",
-            message: null
+            message: null,
+            redirect: redirect || null
         });
     }
 
     try {
+        // Find user (case insensitive)
+        console.log('🔍 Searching for user...');
         const matchingUser = await User.findOne({
             username: { $regex: new RegExp(`^${username.trim()}$`, "i") }
         });
 
-        console.log('🔍 User found:', matchingUser ? matchingUser.username : 'No user found');
-
-        if (matchingUser) {
-            if (matchingUser.password === password) {
-                console.log('✅ Password matched for user:', matchingUser.username);
-                
-                const assignedRole = matchingUser.role || "user";
-                const isSuperAdmin = matchingUser.username === 'superadmin' || 
-                                   (matchingUser.profile && matchingUser.profile.isSuperAdmin === true);
-
-                const userProfile = matchingUser.profile || {};
-                
-                req.session.user = {
-                    id: matchingUser.id,
-                    username: matchingUser.username,
-                    role: assignedRole,
-                    loginTime: new Date(),
-                    profile: userProfile,
-                    isSuperAdmin: isSuperAdmin
-                };
-
-                req.session.save(async (err) => {
-                    if (err) {
-                        console.error('❌ Session save error:', err);
-                        return res.render("login", {
-                            error: "Session error. Please try again.",
-                            message: null
-                        });
-                    }
-                    
-                    console.log('✅ Session saved for user:', matchingUser.username);
-                    console.log('🔑 Session ID:', req.session.id);
-                    
-                    // Load user cart
-                    await loadUserCart(req, matchingUser);
-                    
-                    // Check if cart has items and create active order
-                    if (req.session.cart && req.session.cart.length > 0) {
-                        await createOrUpdateActiveOrder(matchingUser, req.session.cart);
-                    }
-                    
-                    const redirectUrl = isSuperAdmin ? "/superadmin/dashboard" : (redirect || "/");
-                    console.log('➡️ Redirecting to:', redirectUrl);
-                    return res.redirect(redirectUrl);
-                });
-
-            } else {
-                console.log('❌ Password mismatch for user:', matchingUser.username);
-                return res.render("login", {
-                    error: "Invalid Username or Password.",
-                    message: null
-                });
-            }
-        } else {
+        if (!matchingUser) {
             console.log('❌ User not found:', username);
             return res.render("login", {
                 error: "Invalid Username or Password.",
-                message: null
+                message: null,
+                redirect: redirect || null
             });
         }
+
+        console.log('✅ User found:', matchingUser.username);
+        console.log('🔑 Password match:', matchingUser.password === password);
+
+        // Check password (plain text)
+        if (matchingUser.password !== password) {
+            console.log('❌ Password mismatch');
+            return res.render("login", {
+                error: "Invalid Username or Password.",
+                message: null,
+                redirect: redirect || null
+            });
+        }
+
+        console.log('✅ Password matched!');
+
+        // Create session
+        const assignedRole = matchingUser.role || "user";
+        const isSuperAdmin = matchingUser.username === 'superadmin' || 
+                           (matchingUser.profile && matchingUser.profile.isSuperAdmin === true);
+
+        const userProfile = matchingUser.profile || {};
+
+        req.session.user = {
+            id: matchingUser.id,
+            username: matchingUser.username,
+            role: assignedRole,
+            loginTime: new Date(),
+            profile: userProfile,
+            isSuperAdmin: isSuperAdmin
+        };
+
+        console.log('👤 Session user set:', req.session.user.username);
+        console.log('🔑 Session ID:', req.session.id);
+
+        // Save session explicitly
+        req.session.save(async (err) => {
+            if (err) {
+                console.error('❌ Session save error:', err);
+                return res.render("login", {
+                    error: "Session error. Please try again.",
+                    message: null,
+                    redirect: redirect || null
+                });
+            }
+
+            console.log('✅ Session saved successfully');
+
+            // Load user cart
+            try {
+                await loadUserCart(req, matchingUser);
+                console.log('✅ Cart loaded');
+            } catch (cartErr) {
+                console.error('Cart load error:', cartErr);
+            }
+
+            // Create active order if cart has items
+            if (req.session.cart && req.session.cart.length > 0) {
+                try {
+                    await createOrUpdateActiveOrder(matchingUser, req.session.cart);
+                    console.log('✅ Active order created');
+                } catch (orderErr) {
+                    console.error('Active order error:', orderErr);
+                }
+            }
+
+            // Determine redirect URL
+            let redirectUrl = redirect || "/";
+            if (isSuperAdmin) {
+                redirectUrl = "/superadmin/dashboard";
+            } else if (redirect === '/cart' || redirect === '/checkout') {
+                redirectUrl = redirect;
+            }
+
+            console.log('➡️ Redirecting to:', redirectUrl);
+            return res.redirect(redirectUrl);
+        });
+
     } catch (err) {
         console.error('❌ Login error:', err);
         console.error('❌ Error stack:', err.stack);
         return res.render("login", {
             error: "Database error. Please try again.",
-            message: null
+            message: null,
+            redirect: redirect || null
         });
     }
 });
