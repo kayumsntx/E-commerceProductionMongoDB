@@ -30,22 +30,45 @@ const wsClients = new Map();
 
 
 // ==========================================
-// MONGODB CONNECTION (Production Ready)
+// DEBUG LOGGING - লগইন ইস্যু চেক করতে
+// ==========================================
+console.log('🚀 Starting BAGNEST application...');
+console.log('📡 NODE_ENV:', process.env.NODE_ENV);
+console.log('📡 PORT:', process.env.PORT || 8000);
+console.log('📡 MONGODB_URI exists:', !!process.env.MONGODB_URI);
+
+// ==========================================
+// MONGODB CONNECTION (Production Ready - FIXED)
 // ==========================================
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/bagnest_db";
 
+console.log('🔗 Connecting to MongoDB...');
+if (MONGODB_URI.includes('@')) {
+    console.log('📡 Using URI with authentication');
+} else {
+    console.log('📡 Using local MongoDB URI');
+}
+
 mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
 })
-.then(() => console.log("✅ MongoDB connected successfully"))
+.then(() => {
+    console.log("✅ MongoDB connected successfully");
+    ensureSuperAdmin();
+})
 .catch(err => {
     console.error("❌ MongoDB connection error:", err);
     console.log("⚠️ Please check your MONGODB_URI in .env file");
+    console.log("💡 Make sure MongoDB Atlas IP whitelist includes 0.0.0.0/0");
 });
 
 mongoose.connection.on('disconnected', () => {
     console.log('⚠️ MongoDB disconnected');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('❌ MongoDB error:', err);
 });
 
 
@@ -180,22 +203,37 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ==========================================
-// EXPRESS SESSION CONFIGURATION (FIXED FOR PRODUCTION)
+// EXPRESS SESSION CONFIGURATION (FIXED)
 // ==========================================
+const isProduction = process.env.NODE_ENV === 'production';
+console.log('🔒 Session config - Production mode:', isProduction);
+
 app.use(session({
     secret: process.env.SESSION_SECRET || "pos_hub_secure_secret_crypto_key_2026",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: MONGODB_URI, 
-        ttl: 14 * 24 * 60 * 60 // সেশন 14 দিন পরে এক্সপায়ার হবে
+        mongoUrl: MONGODB_URI,
+        ttl: 14 * 24 * 60 * 60,
+        autoRemove: 'native'
     }),
     cookie: { 
-        secure: process.env.NODE_ENV === 'production', 
+        secure: isProduction ? true : false,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: 'lax' // সেশন হাইজ্যাকিং প্রতিরোধে SameSite কুকি পলিসি
-    }
+        sameSite: 'lax',
+        httpOnly: true
+    },
+    name: 'bagnest.sid'
 }));
+
+// Session ডিবাগ মিডলওয়্যার
+app.use((req, res, next) => {
+    if (req.session && req.session.id) {
+        console.log('🔑 Session ID:', req.session.id);
+        console.log('👤 User in session:', req.session.user ? req.session.user.username : 'No user');
+    }
+    next();
+});
 
 // Cache control headers
 app.use((req, res, next) => {
@@ -412,22 +450,65 @@ async function createOrUpdateActiveOrder(user, cartItems) {
     }
 }
 
+// Cart load helper function
+async function loadUserCart(req, user) {
+    try {
+        const userCart = await getUserCart(user.id);
+        if (userCart && userCart.items.length > 0) {
+            req.session.cart = userCart.items;
+            console.log("📦 User cart loaded:", userCart.items.length, "items");
+        } else {
+            req.session.cart = [];
+        }
 
-// ENSURE SUPER ADMIN
+        const guestSessionId = req.cookies.guest_session_id;
+        if (guestSessionId) {
+            const guestCart = await getGuestCart(guestSessionId);
+            if (guestCart && guestCart.items.length > 0) {
+                console.log("🔄 Merging guest cart:", guestCart.items.length, "items");
+                
+                guestCart.items.forEach(guestItem => {
+                    const existingItem = req.session.cart.find(
+                        item => item.id === guestItem.id
+                    );
+                    if (existingItem) {
+                        existingItem.quantity += guestItem.quantity;
+                    } else {
+                        req.session.cart.push({
+                            id: guestItem.id,
+                            name: guestItem.name,
+                            price: guestItem.price || 0,
+                            quantity: guestItem.quantity || 1,
+                            imagePath: guestItem.imagePath || '/uploads/default.jpg'
+                        });
+                    }
+                });
+                
+                await deleteGuestCart(guestSessionId);
+                res.clearCookie('guest_session_id');
+                
+                if (req.session.cart.length > 0) {
+                    await saveUserCart(user.id, req.session.cart);
+                    console.log("✅ Merged cart saved:", req.session.cart.length, "items");
+                }
+            }
+        }
+    } catch (err) {
+        console.error('❌ Error loading cart:', err);
+    }
+}
+
+// ENSURE SUPER ADMIN (FIXED)
 async function ensureSuperAdmin() {
     try {
+        console.log('🔐 Checking for Super Admin...');
         const superAdmin = await User.findOne({ username: 'superadmin' });
         
         if (!superAdmin) {
             console.log('🔐 No Super Admin found. Creating...');
             
-            const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD;
-            
-            if (!superAdminPassword) {
-                console.error('❌ SUPER_ADMIN_PASSWORD not found in .env file!');
-                console.log('⚠️ Please add SUPER_ADMIN_PASSWORD to your .env file');
-                return;
-            }
+            const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
+            console.log('🔑 Super Admin password set to:', superAdminPassword);
             
             const newSuperAdmin = new User({
                 id: "USR-SUPER-ADMIN-" + Date.now(),
@@ -448,21 +529,17 @@ async function ensureSuperAdmin() {
             await newSuperAdmin.save();
             console.log('✅ Super Admin created successfully!');
             console.log('📧 Username: superadmin');
-            console.log('🔑 Password: Check your .env file');
+            console.log('🔑 Password:', superAdminPassword);
             console.log('⚠️ PLEASE CHANGE PASSWORD AFTER FIRST LOGIN!');
         } else {
             console.log('✅ Super Admin already exists');
+            console.log('📧 Username: superadmin');
         }
     } catch (error) {
         console.error('❌ Error creating Super Admin:', error.message);
+        console.error('❌ Error stack:', error.stack);
     }
 }
-
-// Call after MongoDB connection
-mongoose.connection.once('open', () => {
-    ensureSuperAdmin();
-});
-
 
 
 // AUTH MIDDLEWARE
@@ -549,6 +626,37 @@ const broadcastRefresh = (data = {}) => {
 // ROUTES
 
 
+// ---------- TEST ROUTES (ডিবাগিং) ----------
+app.get("/test-db", async (req, res) => {
+    try {
+        const userCount = await User.countDocuments();
+        const users = await User.find({}, { password: 0 });
+        
+        res.json({
+            success: true,
+            database: 'Connected',
+            userCount: userCount,
+            users: users,
+            environment: process.env.NODE_ENV,
+            mongodb_uri_exists: !!process.env.MONGODB_URI
+        });
+    } catch (err) {
+        res.json({
+            success: false,
+            error: err.message,
+            stack: err.stack
+        });
+    }
+});
+
+app.get("/test-session", (req, res) => {
+    res.json({
+        sessionID: req.session.id,
+        user: req.session.user || null,
+        cookie: req.session.cookie
+    });
+});
+
 // ---------- REGISTER ----------
 app.get("/register", (req, res) => {
   res.render("register", { error: null, success: null });
@@ -611,100 +719,98 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ---------- LOGIN ----------
+// ---------- LOGIN (FIXED) ----------
 app.get("/login", (req, res) => {
-  res.render("login", { error: null, message: req.query.message || null });
+    console.log('🔐 Login page requested');
+    res.render("login", { error: null, message: req.query.message || null });
 });
 
 app.post("/login", async (req, res) => {
-  const { username, password, redirect } = req.body;
-
-  try {
-    const matchingUser = await User.findOne({
-      username: { $regex: new RegExp(`^${username.trim()}$`, "i") },
-      password: password
-    });
-
-    if (matchingUser) {
-      const assignedRole = matchingUser.role || "user";
-      const isSuperAdmin = matchingUser.username === 'superadmin' || 
-                           matchingUser.profile?.isSuperAdmin === true;
-
-      const userProfile = matchingUser.profile || {};
-      req.session.user = {
-        id: matchingUser.id,
-        username: matchingUser.username,
-        role: assignedRole,
-        loginTime: new Date(),
-        profile: userProfile,
-        isSuperAdmin: isSuperAdmin
-      };
-
-      const userCart = await getUserCart(matchingUser.id);
-      if (userCart && userCart.items.length > 0) {
-        req.session.cart = userCart.items;
-        console.log("📦 User cart loaded:", userCart.items.length, "items");
-      } else {
-        req.session.cart = [];
-      }
-
-      const guestSessionId = req.cookies.guest_session_id;
-      if (guestSessionId) {
-        const guestCart = await getGuestCart(guestSessionId);
-        if (guestCart && guestCart.items.length > 0) {
-          console.log("🔄 Merging guest cart:", guestCart.items.length, "items");
-          
-          guestCart.items.forEach(guestItem => {
-            const existingItem = req.session.cart.find(
-              item => item.id === guestItem.id
-            );
-            if (existingItem) {
-              existingItem.quantity += guestItem.quantity;
-            } else {
-              req.session.cart.push({
-                id: guestItem.id,
-                name: guestItem.name,
-                price: guestItem.price || 0,
-                quantity: guestItem.quantity || 1,
-                imagePath: guestItem.imagePath || '/uploads/default.jpg'
-              });
-            }
-          });
-          
-          await deleteGuestCart(guestSessionId);
-          res.clearCookie('guest_session_id');
-          
-          if (req.session.cart.length > 0) {
-            await saveUserCart(matchingUser.id, req.session.cart);
-            console.log("✅ Merged cart saved:", req.session.cart.length, "items");
-          }
-        }
-      }
-
-      if (req.session.cart.length === 0) {
-        const dbCart = await getUserCart(matchingUser.id);
-        if (dbCart && dbCart.items.length > 0) {
-          req.session.cart = dbCart.items;
-          console.log("📦 Cart loaded from database:", dbCart.items.length, "items");
-        }
-      }
-
-      console.log("📦 Final cart items:", req.session.cart.length);
-
-      const redirectUrl = isSuperAdmin ? "/superadmin/dashboard" : (redirect || "/");
-      return res.redirect(redirectUrl);
-
-    } else {
-      return res.render("login", {
-        error: "Invalid Username or Password.",
-      });
+    console.log('🔐 Login attempt received');
+    const { username, password, redirect } = req.body;
+    console.log('📝 Login attempt for username:', username);
+    
+    if (!username || !password) {
+        console.log('❌ Missing username or password');
+        return res.render("login", {
+            error: "Username and password are required.",
+            message: null
+        });
     }
-  } catch (err) {
-    console.error("Login error:", err);
-    return res.render("login", {
-      error: "Database error. Please try again.",
-    });
-  }
+
+    try {
+        const matchingUser = await User.findOne({
+            username: { $regex: new RegExp(`^${username.trim()}$`, "i") }
+        });
+
+        console.log('🔍 User found:', matchingUser ? matchingUser.username : 'No user found');
+
+        if (matchingUser) {
+            if (matchingUser.password === password) {
+                console.log('✅ Password matched for user:', matchingUser.username);
+                
+                const assignedRole = matchingUser.role || "user";
+                const isSuperAdmin = matchingUser.username === 'superadmin' || 
+                                   (matchingUser.profile && matchingUser.profile.isSuperAdmin === true);
+
+                const userProfile = matchingUser.profile || {};
+                
+                req.session.user = {
+                    id: matchingUser.id,
+                    username: matchingUser.username,
+                    role: assignedRole,
+                    loginTime: new Date(),
+                    profile: userProfile,
+                    isSuperAdmin: isSuperAdmin
+                };
+
+                req.session.save(async (err) => {
+                    if (err) {
+                        console.error('❌ Session save error:', err);
+                        return res.render("login", {
+                            error: "Session error. Please try again.",
+                            message: null
+                        });
+                    }
+                    
+                    console.log('✅ Session saved for user:', matchingUser.username);
+                    console.log('🔑 Session ID:', req.session.id);
+                    
+                    // Load user cart
+                    await loadUserCart(req, matchingUser);
+                    
+                    // Check if cart has items and create active order
+                    if (req.session.cart && req.session.cart.length > 0) {
+                        await createOrUpdateActiveOrder(matchingUser, req.session.cart);
+                    }
+                    
+                    const redirectUrl = isSuperAdmin ? "/superadmin/dashboard" : (redirect || "/");
+                    console.log('➡️ Redirecting to:', redirectUrl);
+                    return res.redirect(redirectUrl);
+                });
+
+            } else {
+                console.log('❌ Password mismatch for user:', matchingUser.username);
+                return res.render("login", {
+                    error: "Invalid Username or Password.",
+                    message: null
+                });
+            }
+        } else {
+            console.log('❌ User not found:', username);
+            return res.render("login", {
+                error: "Invalid Username or Password.",
+                message: null
+            });
+        }
+    } catch (err) {
+        console.error('❌ Login error:', err);
+        console.error('❌ Error stack:', err.stack);
+        return res.render("login", {
+            error: "Database error. Please try again.",
+            message: null
+        });
+    }
 });
 
 // ---------- LOGOUT ----------
