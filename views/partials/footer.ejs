@@ -343,58 +343,58 @@
     }
 
     socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        try {
+            const data = JSON.parse(event.data);
 
-      
-        if (data.type === 'REFRESH_DATA') {
-            console.log('Database updated. Fetching new data silently...');
-            
-      
-            if (typeof updateCartCount === 'function') updateCartCount();
-            if (typeof updateAllQuantities === 'function') updateAllQuantities();
-            if (typeof reloadCartSidebar === 'function') reloadCartSidebar();
+            if (data.type === 'REFRESH_DATA') {
+                console.log('Update received. Processing...');
 
-            
-            $.get(window.location.href, function(response) {
-                var $newDOM = $(response);
-                
-               
-                if ($('.product-grid').length) {
-                    $('.product-grid').html($newDOM.find('.product-grid').html());
+                // ১. এডমিন প্যানেলের জন্য (অটো রিলোড হবে, যাতে নতুন প্রোডাক্ট ঠিকভাবে দেখা যায়)
+                if (window.location.pathname.includes('/admin')) {
+                    window.location.reload();
+                    return; // এডমিন প্যানেলে রিলোড হয়ে গেলে নিচের কোড আর রান করবে না
                 }
-                
-            
-                if ($('.home-catalog-grid').length) {
-                    $('.home-catalog-grid').html($newDOM.find('.home-catalog-grid').html());
-                }
-                
-                
-                if ($('#ordersTableBody').length) {
-                    $('#ordersTableBody').html($newDOM.find('#ordersTableBody').html());
-                }
-                
 
-                if ($('.admin-inventory-grid').length) {
-                    $('.admin-inventory-grid').html($newDOM.find('.admin-inventory-grid').html());
+                // ২. সাধারণ ইউজার বা POS ড্যাশবোর্ডের জন্য (কোনো রিলোড হবে না, বাটনও নষ্ট হবে না)
+                
+                // কার্টের সংখ্যা সাথে সাথে আপডেট করা
+                if (typeof window.updateCartCount === 'function') {
+                    window.updateCartCount();
+                }
+                if (typeof window.updateAllQuantities === 'function') {
+                    window.updateAllQuantities();
+                }
+
+                // ব্যাকগ্রাউন্ড থেকে শুধু স্টকের নাম্বারটি আপডেট করা (পুরো ডিজাইন পরিবর্তন না করে)
+                $.get(window.location.href, function(response) {
+                    var $newDOM = $(response);
                     
-                    
-                    $('.admin-product-card form[action="/product/delete"]').off('submit').on('submit', function(e) {
-                        var productName = $(this).closest('.admin-product-card').find('.product-name').text().trim();
-                        if (!confirm('⚠️ Are you sure you want to delete "' + productName + '" permanently?\n\nThis action cannot be undone!')) {
-                            e.preventDefault();
-                            return false;
+                    // ড্যাশবোর্ড বা হোমপেজের প্রোডাক্টগুলোর শুধুমাত্র স্টক আপডেট করা
+                    $('.product-card, .home-card').each(function() {
+                        var id = $(this).attr('data-product-id') || $(this).data('product-id');
+                        if (id) {
+                            // নতুন পেজ থেকে শুধু এই প্রোডাক্টের স্টকের লেখাটি খুঁজে আনা
+                            var newStockText = $newDOM.find('[data-product-id="' + id + '"] .stock-count').text();
+                            if (newStockText) {
+                                $(this).find('.stock-count').text(newStockText);
+                            }
                         }
                     });
+                });
+            }
+
+            
+            if (data.type === 'CHAT_MSG') {
+                if (typeof appendIncomingMessageBubble === 'function') {
+                    appendIncomingMessageBubble(data);
                 }
-            });
-        }
-
-     
-
-        if (data.type === 'CHAT_MSG') {
-            appendIncomingMessageBubble(data);
+            }
+        } catch (error) {
+            console.error("Socket Update Error: ", error);
         }
     };
+     
+        
     function toggleChatDesk() {
         const chatBox = document.getElementById('chat-window-desk');
         if (chatBox.style.display === 'none' || chatBox.style.display === '') {
