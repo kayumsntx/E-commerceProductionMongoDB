@@ -347,33 +347,37 @@
             const data = JSON.parse(event.data);
 
             if (data.type === 'REFRESH_DATA') {
-                console.log('Update received. Processing...');
+                console.log('Update received. Checking for changes...');
 
-                // ১. এডমিন প্যানেলের জন্য (অটো রিলোড হবে, যাতে নতুন প্রোডাক্ট ঠিকভাবে দেখা যায়)
+                // ১. এডমিন প্যানেলের পেজ হলে অটো রিলোড হবে
                 if (window.location.pathname.includes('/admin')) {
                     window.location.reload();
-                    return; // এডমিন প্যানেলে রিলোড হয়ে গেলে নিচের কোড আর রান করবে না
+                    return; 
                 }
 
-                // ২. সাধারণ ইউজার বা POS ড্যাশবোর্ডের জন্য (কোনো রিলোড হবে না, বাটনও নষ্ট হবে না)
-                
-                // কার্টের সংখ্যা সাথে সাথে আপডেট করা
-                if (typeof window.updateCartCount === 'function') {
-                    window.updateCartCount();
-                }
-                if (typeof window.updateAllQuantities === 'function') {
-                    window.updateAllQuantities();
-                }
+                // ২. কার্টের ব্যাজ সাথে সাথে আপডেট করা
+                if (typeof window.updateCartCount === 'function') window.updateCartCount();
+                if (typeof window.updateAllQuantities === 'function') window.updateAllQuantities();
 
-                // ব্যাকগ্রাউন্ড থেকে শুধু স্টকের নাম্বারটি আপডেট করা (পুরো ডিজাইন পরিবর্তন না করে)
+                // ৩. স্মার্ট সেন্সর: নতুন প্রোডাক্ট নাকি শুধু স্টক আপডেট?
                 $.get(window.location.href, function(response) {
                     var $newDOM = $(response);
                     
-                    // ড্যাশবোর্ড বা হোমপেজের প্রোডাক্টগুলোর শুধুমাত্র স্টক আপডেট করা
+                    // বর্তমান পেজে কয়টি প্রোডাক্ট আছে এবং নতুন পেজে কয়টি আছে তার হিসাব
+                    var currentProductCount = $('.product-card, .home-card').length;
+                    var newProductCount = $newDOM.find('.product-card, .home-card').length;
+
+                    // ম্যাজিক ট্রিক: যদি প্রোডাক্টের সংখ্যা বাড়ে (মানে নতুন প্রোডাক্ট অ্যাড হয়েছে), তাহলে রিলোড দিয়ে নতুনটিকে নিয়ে আসো
+                    if (newProductCount !== currentProductCount) {
+                        console.log('New product detected! Reloading page safely...');
+                        window.location.reload();
+                        return;
+                    }
+
+                    // আর যদি নতুন প্রোডাক্ট না থাকে (অর্থাৎ শুধু বেচাকেনা হয়েছে), তবে সাইলেন্ট আপডেট
                     $('.product-card, .home-card').each(function() {
                         var id = $(this).attr('data-product-id') || $(this).data('product-id');
                         if (id) {
-                            // নতুন পেজ থেকে শুধু এই প্রোডাক্টের স্টকের লেখাটি খুঁজে আনা
                             var newStockText = $newDOM.find('[data-product-id="' + id + '"] .stock-count').text();
                             if (newStockText) {
                                 $(this).find('.stock-count').text(newStockText);
@@ -383,7 +387,7 @@
                 });
             }
 
-            
+            // চ্যাটিং সিস্টেম
             if (data.type === 'CHAT_MSG') {
                 if (typeof appendIncomingMessageBubble === 'function') {
                     appendIncomingMessageBubble(data);
