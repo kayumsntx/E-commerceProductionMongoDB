@@ -249,7 +249,7 @@ console.log('🔒 Session config - Production mode:', isProduction);
 
 app.set('trust proxy', 1);
 app.use(session({
-    secret: process.env.SESSION_SECRET || "pos_hub_secure_secret_crypto_key_2026",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
