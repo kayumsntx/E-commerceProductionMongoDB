@@ -5,6 +5,8 @@ require('dotenv').config();
 
 const express = require("express");
 const multer = require("multer");
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
@@ -255,14 +257,30 @@ app.use((req, res, next) => {
 });
 
 // Upload directories
-if (!fs.existsSync("./uploads")) fs.mkdirSync("./uploads");
+// if (!fs.existsSync("./uploads")) fs.mkdirSync("./uploads");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => cb(null, "uploads/"),
+//   filename: (req, file, cb) =>
+//     cb(null, Date.now() + path.extname(file.originalname)),
+// });
+// const upload = multer({ storage: storage });
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'bagnest_products',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp']
+  },
 });
 const upload = multer({ storage: storage });
+
 
 
 // HELPER FUNCTIONS
@@ -710,6 +728,27 @@ app.post("/register", async (req, res) => {
       success: null,
     });
   }
+});
+//for image
+app.post('/product/create', upload.single('newProductImage'), async (req, res) => {
+    try {
+        const imageUrl = req.file ? req.file.path : '/images/default.jpg';
+        
+        const newProduct = new Product({
+            name: req.body.newProductName,
+            price: req.body.newProductPrice,
+            stock: req.body.newProductStock,
+            imagePath: imageUrl 
+        });
+        await newProduct.save();
+
+     
+        if (global.io) global.io.emit('REFRESH_DATA', { type: 'REFRESH_DATA' });
+
+        res.redirect('/admin/inventory?success=true');
+    } catch (err) {
+        res.redirect('/admin/inventory?error=' + encodeURIComponent(err.message));
+    }
 });
 
 // ==========================================
