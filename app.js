@@ -185,6 +185,48 @@ const GuestCart = mongoose.model("GuestCart", guestCartSchema);
 
 
 
+// ==========================================
+// CLOUDINARY CONFIGURATION
+// ==========================================
+console.log('☁️ Configuring Cloudinary...');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Cloudinary Storage for Products
+const productStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'bagnest_products',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif']
+  },
+});
+
+// Cloudinary Storage for Profile Avatars
+const avatarStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'bagnest_avatars',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp']
+  },
+});
+
+// Multer Upload (Products)
+const upload = multer({ 
+  storage: productStorage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+// Multer Upload (Avatar)
+const avatarUpload = multer({ 
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 } // 2MB limit
+});
+
+
 // MIDDLEWARE
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -255,32 +297,6 @@ app.use((req, res, next) => {
   res.locals.isGuest = !req.session.user;
   next();
 });
-
-// Upload directories
-// if (!fs.existsSync("./uploads")) fs.mkdirSync("./uploads");
-
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => cb(null, "uploads/"),
-//   filename: (req, file, cb) =>
-//     cb(null, Date.now() + path.extname(file.originalname)),
-// });
-// const upload = multer({ storage: storage });
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'bagnest_products',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp']
-  },
-});
-const upload = multer({ storage: storage });
-
 
 
 // HELPER FUNCTIONS
@@ -728,27 +744,6 @@ app.post("/register", async (req, res) => {
       success: null,
     });
   }
-});
-//for image
-app.post('/product/create', upload.single('newProductImage'), async (req, res) => {
-    try {
-        const imageUrl = req.file ? req.file.path : '/images/default.jpg';
-        
-        const newProduct = new Product({
-            name: req.body.newProductName,
-            price: req.body.newProductPrice,
-            stock: req.body.newProductStock,
-            imagePath: imageUrl 
-        });
-        await newProduct.save();
-
-     
-        if (global.io) global.io.emit('REFRESH_DATA', { type: 'REFRESH_DATA' });
-
-        res.redirect('/admin/inventory?success=true');
-    } catch (err) {
-        res.redirect('/admin/inventory?error=' + encodeURIComponent(err.message));
-    }
 });
 
 // ==========================================
@@ -1438,7 +1433,8 @@ app.post("/api/profile/password", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/profile/avatar", requireAuth, upload.single('avatar'), async (req, res) => {
+// ---------- PROFILE AVATAR (CLOUDINARY) ----------
+app.post("/api/profile/avatar", requireAuth, avatarUpload.single('avatar'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: "No image uploaded" });
   }
@@ -1453,14 +1449,8 @@ app.post("/api/profile/avatar", requireAuth, upload.single('avatar'), async (req
       user.profile = {};
     }
     
-    if (user.profile.avatar) {
-      const oldAvatarPath = path.join(__dirname, user.profile.avatar);
-      if (fs.existsSync(oldAvatarPath)) {
-        fs.unlinkSync(oldAvatarPath);
-      }
-    }
-    
-    user.profile.avatar = `/uploads/${req.file.filename}`;
+    // Update avatar with Cloudinary URL
+    user.profile.avatar = req.file.path;
     await user.save();
     req.session.user.profile.avatar = user.profile.avatar;
     
@@ -1692,11 +1682,12 @@ app.get("/admin/inventory", requireAdmin, async (req, res) => {
   }
 });
 
+// ---------- PRODUCT CREATE (CLOUDINARY) ----------
 app.post("/product/create", requireAdmin, upload.single("newProductImage"), async (req, res) => {
   const { newProductName, newProductPrice, newProductStock } = req.body;
 
   if (!req.file) {
-    return res.status(400).send("Product layouts require an illustration attachment file.");
+    return res.status(400).send("Product image is required.");
   }
 
   try {
@@ -1708,7 +1699,7 @@ app.post("/product/create", requireAdmin, upload.single("newProductImage"), asyn
       price: parseFloat(newProductPrice),
       stock: stock,
       stockStatus: stock > 0 ? (stock <= 5 ? 'low_stock' : 'in_stock') : 'out_of_stock',
-      imagePath: `/uploads/${req.file.filename}`,
+      imagePath: req.file.path, // Cloudinary URL
     });
 
     await newProduct.save();
@@ -1720,6 +1711,7 @@ app.post("/product/create", requireAdmin, upload.single("newProductImage"), asyn
   }
 });
 
+// ---------- PRODUCT UPDATE (CLOUDINARY) ----------
 app.post("/product/update", requireAdmin, upload.single("updateProductImage"), async (req, res) => {
   const { productId, updateProductName, updateProductPrice, updateProductStock } = req.body;
 
@@ -1734,7 +1726,7 @@ app.post("/product/update", requireAdmin, upload.single("updateProductImage"), a
     };
 
     if (req.file) {
-      updateFields.imagePath = `/uploads/${req.file.filename}`;
+      updateFields.imagePath = req.file.path; // Cloudinary URL
     }
 
     const updatedProduct = await Product.findOneAndUpdate(
@@ -1750,7 +1742,7 @@ app.post("/product/update", requireAdmin, upload.single("updateProductImage"), a
             ...item,
             name: updateProductName,
             price: parseFloat(updateProductPrice),
-            imagePath: req.file ? `/uploads/${req.file.filename}` : item.imagePath,
+            imagePath: req.file ? req.file.path : item.imagePath,
           };
         }
         return item;
