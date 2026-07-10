@@ -343,62 +343,20 @@
     }
 
     socket.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
 
-            if (data.type === 'REFRESH_DATA') {
-                console.log('Update received. Checking for changes...');
+   
+        if (data.type === 'REFRESH_DATA') {
+            console.log('Central Database Mutation Registered. Re-rendering UI elements cleanly...');
+            window.location.reload();
+        }
 
-                // ১. এডমিন প্যানেলের পেজ হলে অটো রিলোড হবে
-                if (window.location.pathname.includes('/admin')) {
-                    window.location.reload();
-                    return; 
-                }
-
-                // ২. কার্টের ব্যাজ সাথে সাথে আপডেট করা
-                if (typeof window.updateCartCount === 'function') window.updateCartCount();
-                if (typeof window.updateAllQuantities === 'function') window.updateAllQuantities();
-
-                // ৩. স্মার্ট সেন্সর: নতুন প্রোডাক্ট নাকি শুধু স্টক আপডেট?
-                $.get(window.location.href, function(response) {
-                    var $newDOM = $(response);
-                    
-                    // বর্তমান পেজে কয়টি প্রোডাক্ট আছে এবং নতুন পেজে কয়টি আছে তার হিসাব
-                    var currentProductCount = $('.product-card, .home-card').length;
-                    var newProductCount = $newDOM.find('.product-card, .home-card').length;
-
-                    // ম্যাজিক ট্রিক: যদি প্রোডাক্টের সংখ্যা বাড়ে (মানে নতুন প্রোডাক্ট অ্যাড হয়েছে), তাহলে রিলোড দিয়ে নতুনটিকে নিয়ে আসো
-                    if (newProductCount !== currentProductCount) {
-                        console.log('New product detected! Reloading page safely...');
-                        window.location.reload();
-                        return;
-                    }
-
-                    // আর যদি নতুন প্রোডাক্ট না থাকে (অর্থাৎ শুধু বেচাকেনা হয়েছে), তবে সাইলেন্ট আপডেট
-                    $('.product-card, .home-card').each(function() {
-                        var id = $(this).attr('data-product-id') || $(this).data('product-id');
-                        if (id) {
-                            var newStockText = $newDOM.find('[data-product-id="' + id + '"] .stock-count').text();
-                            if (newStockText) {
-                                $(this).find('.stock-count').text(newStockText);
-                            }
-                        }
-                    });
-                });
-            }
-
-            // চ্যাটিং সিস্টেম
-            if (data.type === 'CHAT_MSG') {
-                if (typeof appendIncomingMessageBubble === 'function') {
-                    appendIncomingMessageBubble(data);
-                }
-            }
-        } catch (error) {
-            console.error("Socket Update Error: ", error);
+   
+        if (data.type === 'CHAT_MSG') {
+            appendIncomingMessageBubble(data);
         }
     };
-     
-        
+
     function toggleChatDesk() {
         const chatBox = document.getElementById('chat-window-desk');
         if (chatBox.style.display === 'none' || chatBox.style.display === '') {
