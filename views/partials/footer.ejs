@@ -345,18 +345,48 @@
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-   
+    
         if (data.type === 'REFRESH_DATA') {
-            console.log('Central Database Mutation Registered. Re-rendering UI elements cleanly...');
-            window.location.reload();
+            console.log('Central Database Mutation Registered. Silently updating UI...');
+            
+            
+            if (typeof updateCartCount === 'function') updateCartCount();
+            if (typeof updateAllQuantities === 'function') updateAllQuantities();
+            if (typeof reloadCartSidebar === 'function') reloadCartSidebar();
+
+           
+            $.get(window.location.href, function(response) {
+                var $newDOM = $(response);
+                
+               
+                if ($('.product-grid').length) {
+                    $('.product-grid').html($newDOM.find('.product-grid').html());
+               
+                if ($('.home-catalog-grid').length) {
+                    $('.home-catalog-grid').html($newDOM.find('.home-catalog-grid').html());
+                }
+            
+                if ($('#ordersTableBody').length) {
+                    $('#ordersTableBody').html($newDOM.find('#ordersTableBody').html());
+                }
+             
+                if ($('.admin-inventory-grid').length) {
+                    $('.admin-inventory-grid .admin-product-card').each(function(index) {
+                        var newCard = $newDOM.find('.admin-inventory-grid .admin-product-card').eq(index);
+                        if(newCard.length) {
+                            $(this).find('.stock-count').text(newCard.find('.stock-count').text());
+                            $(this).find('.stock-badge').replaceWith(newCard.find('.stock-badge'));
+                        }
+                    });
+                }
+            }});
         }
 
-   
+
         if (data.type === 'CHAT_MSG') {
             appendIncomingMessageBubble(data);
         }
     };
-
     function toggleChatDesk() {
         const chatBox = document.getElementById('chat-window-desk');
         if (chatBox.style.display === 'none' || chatBox.style.display === '') {
