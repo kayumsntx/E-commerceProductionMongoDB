@@ -196,6 +196,32 @@
         border-radius: 12px;
     }
 
+    .preview-thumb-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+
+    .preview-thumb-wrapper .preview-remove {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
+        text-align: center;
+        background: #e53e3e;
+        color: #fff;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .preview-thumb-wrapper .preview-remove:hover {
+        background: #c53030;
+    }
+
     .file-label-with-count {
         display: flex;
         align-items: center;
@@ -796,72 +822,93 @@
 $(document).ready(function() {
 
     // ============================================
-    // CREATE FORM - Image Preview
+    // MULTI-IMAGE PICKING (CREATE + UPDATE FORMS)
     // ============================================
-    $('#createProductImages').on('change', function() {
-        const preview = $('#createImagePreview');
-        preview.empty();
-        const files = this.files;
-        const fileCount = files ? files.length : 0;
-        
-        // Update count badge
-        $('#createFileCount').text(fileCount);
-        
-        if (fileCount > 0) {
-            // Show count info
-            preview.append(`
-                <span class="preview-count">
-                    <i class="fas fa-check-circle"></i> ${fileCount} image(s) selected
-                </span>
-            `);
-            
-            // Show thumbnails (max 5)
-            for (let i = 0; i < Math.min(fileCount, 5); i++) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.append(`
-                        <img src="${e.target.result}" class="preview-thumb" title="Image ${i+1}">
-                    `);
-                }
-                reader.readAsDataURL(files[i]);
-            }
-        }
-    });
+    // A plain <input type="file" multiple> REPLACES its whole FileList every
+    // time the OS file dialog is used. So picking one image, then opening the
+    // dialog again for a second image, wiped out the first one.
+    // Fix: keep our own running list of File objects per input (in .data()),
+    // merge newly picked files into it, cap at 5, drop exact duplicates,
+    // then rebuild the input's FileList via DataTransfer so the form submits
+    // ALL accumulated images, not just the last picked batch.
 
-    // ============================================
-    // UPDATE FORM - Image Preview (for each product)
-    // ============================================
-    $(document).on('change', 'input[name="productImages"]', function() {
-        const $form = $(this).closest('form');
-        const productId = $form.find('input[name="productId"]').val();
-        const previewId = '#updateImagePreview_' + productId;
-        const countId = '#updateFileCount_' + productId;
-        const preview = $(previewId);
-        preview.empty();
-        
-        const files = this.files;
-        const fileCount = files ? files.length : 0;
-        
-        // Update count badge
-        $(countId).text(fileCount);
-        
-        if (fileCount > 0) {
-            preview.append(`
-                <span class="preview-count">
-                    <i class="fas fa-check-circle"></i> ${fileCount} new image(s)
-                </span>
-            `);
-            
-            for (let i = 0; i < Math.min(fileCount, 5); i++) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.append(`
-                        <img src="${e.target.result}" class="preview-thumb" style="border-color:#f39c12;" title="New Image ${i+1}">
-                    `);
-                }
-                reader.readAsDataURL(files[i]);
+    function filesToDataTransfer(files) {
+        const dt = new DataTransfer();
+        files.forEach(function (f) { dt.items.add(f); });
+        return dt.files;
+    }
+
+    function renderImagePreview($input, files, $preview, $count) {
+        $preview.empty();
+        $count.text(files.length);
+
+        if (files.length > 0) {
+            $preview.append(
+                '<span class="preview-count"><i class="fas fa-check-circle"></i> ' +
+                files.length + ' image(s) selected</span>'
+            );
+        }
+
+        files.forEach(function (file, idx) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const $wrap = $('<span class="preview-thumb-wrapper"></span>');
+                $wrap.append(
+                    '<img src="' + e.target.result + '" class="preview-thumb" title="' +
+                    (idx === 0 ? 'Main Image' : 'Image ' + (idx + 1)) + '">'
+                );
+                const $remove = $('<span class="preview-remove" title="Remove">&times;</span>');
+                $remove.on('click', function () {
+                    files.splice(idx, 1);
+                    $input.data('selectedFiles', files);
+                    $input[0].files = filesToDataTransfer(files);
+                    renderImagePreview($input, files, $preview, $count);
+                });
+                $wrap.append($remove);
+                $preview.append($wrap);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    $(document).on('change', 'input[name="productImages"]', function () {
+        const $input = $(this);
+        const isCreate = $input.attr('id') === 'createProductImages';
+
+        let $preview, $count;
+        if (isCreate) {
+            $preview = $('#createImagePreview');
+            $count = $('#createFileCount');
+        } else {
+            const $form = $input.closest('form');
+            const productId = $form.find('input[name="productId"]').val();
+            $preview = $('#updateImagePreview_' + productId);
+            $count = $('#updateFileCount_' + productId);
+        }
+
+        let files = $input.data('selectedFiles') || [];
+        const newlyPicked = Array.from(this.files);
+
+        newlyPicked.forEach(function (f) {
+            const isDuplicate = files.some(function (existing) {
+                return existing.name === f.name && existing.size === f.size &&
+                       existing.lastModified === f.lastModified;
+            });
+            if (!isDuplicate && files.length < 5) {
+                files.push(f);
+            }
+        });
+
+        if (files.length > 5) {
+            files = files.slice(0, 5);
+            if (typeof showNotification === 'function') {
+                showNotification('⚠️ Maximum 5 images allowed, extra ones ignored.', 'warning');
             }
         }
+
+        $input.data('selectedFiles', files);
+        this.files = filesToDataTransfer(files); // so the form actually submits all of them
+        renderImagePreview($input, files, $preview, $count);
     });
 
     // ============================================
