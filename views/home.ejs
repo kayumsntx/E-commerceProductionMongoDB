@@ -132,28 +132,81 @@
         display: flex;
         flex-direction: column;
         position: relative;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-decoration: none;
+    }
+
+    .home-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .home-card a {
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
     }
 
     .home-card img {
         width: 100%;
-        height: 100%;
+        height: 200px;
         object-fit: cover;
         background: #edf2f7;
+        transition: transform 0.3s ease;
+    }
+
+    .home-card:hover img {
+        transform: scale(1.03);
     }
 
     .home-card-body {
-        padding: 20px;
+        padding: 16px 18px 18px;
         display: flex;
         flex-direction: column;
         flex-grow: 1;
         text-align: center;
     }
 
-    .home-card-body strong {
-        font-size: 1.1rem;
+    .home-card-body .product-name {
+        font-size: 1rem;
+        font-weight: 600;
         color: #2d3748;
         display: block;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        line-height: 1.3;
+        min-height: 2.6rem;
+    }
+
+    .home-card-body .product-price {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #2b6cb0;
+        margin-bottom: 4px;
+    }
+
+    .home-card-body .original-price {
+        font-size: 0.85rem;
+        color: #a0aec0;
+        text-decoration: line-through;
+        margin-bottom: 4px;
+    }
+
+    .home-card-body .discount-badge {
+        display: inline-block;
+        background: #e53e3e;
+        color: white;
+        padding: 1px 10px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-bottom: 6px;
     }
 
     /* sold out */
@@ -286,6 +339,41 @@
         border: 1px solid #e2e8f0;
     }
 
+    /* View Details Link */
+    .view-details-link {
+        display: block;
+        text-align: center;
+        margin-top: 6px;
+        font-size: 0.75rem;
+        color: #f39c12;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: color 0.3s ease;
+    }
+
+    .view-details-link:hover {
+        color: #e67e22;
+    }
+
+    /* Color & Size Tags */
+    .variant-tags {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 4px;
+    }
+
+    .variant-tag {
+        background: #edf2f7;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 0.6rem;
+        color: #4a5568;
+        font-weight: 600;
+    }
+
     @media (max-width: 1024px) {
         .home-catalog-grid {
             grid-template-columns: repeat(3, 1fr);
@@ -385,9 +473,13 @@
         <div class="home-catalog-grid">
             <% products.forEach(product=> { %>
                 <div class="home-card" data-product-id="<%= product.id %>">
-                    <img src="<%= product.imagePath %>" alt="<%= product.name %>">
                     
+                    <!-- Product Image with Link -->
+                    <a href="/product/<%= product.id %>">
+                        <img src="<%= product.imagePath %>" alt="<%= product.name %>" loading="lazy">
+                    </a>
                     
+                    <!-- Stock Badges -->
                     <% if (product.stock <= 0) { %>
                         <div class="sold-out-badge">
                             <i class="fas fa-times-circle"></i> SOLD OUT
@@ -399,16 +491,47 @@
                     <% } %>
                     
                     <div class="home-card-body">
-                        <strong><%= product.name %></strong>
-                        <div class="price" style="font-size: 1.3rem; margin-bottom: 4px;">BDT. <%= product.price.toFixed(2) %></div>
+                        <!-- Product Name with Link -->
+                        <a href="/product/<%= product.id %>" style="text-decoration: none; color: inherit;">
+                            <span class="product-name"><%= product.name %></span>
+                        </a>
                         
-                    
+                        <!-- Price -->
+                        <div class="product-price">BDT. <%= product.price.toFixed(2) %></div>
+                        
+                        <!-- Original Price & Discount -->
+                        <% if (product.originalPrice && product.originalPrice > product.price) { 
+                            var discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+                        %>
+                            <div class="original-price">BDT. <%= product.originalPrice.toFixed(2) %></div>
+                            <span class="discount-badge">-<%= discount %>% OFF</span>
+                        <% } %>
+                        
+                        <!-- Colors & Sizes Tags -->
+                        <% if ((product.colors && product.colors.length > 0) || (product.sizes && product.sizes.length > 0)) { %>
+                            <div class="variant-tags">
+                                <% if (product.colors && product.colors.length > 0) { %>
+                                    <span class="variant-tag"><i class="fas fa-palette"></i> <%= product.colors.slice(0, 3).join(', ') %><%= product.colors.length > 3 ? ' +' + (product.colors.length - 3) : '' %></span>
+                                <% } %>
+                                <% if (product.sizes && product.sizes.length > 0) { %>
+                                    <span class="variant-tag"><i class="fas fa-ruler"></i> <%= product.sizes.slice(0, 3).join(', ') %><%= product.sizes.length > 3 ? ' +' + (product.sizes.length - 3) : '' %></span>
+                                <% } %>
+                            </div>
+                        <% } %>
+                        
+                        <!-- Stock Info -->
                         <div class="stock-info">
                             <i class="fas fa-box"></i>
                             <span class="stock-label">In Stock:</span>
                             <span class="stock-count"><%= product.stock || 0 %></span>
                         </div>
 
+                        <!-- View Details Link -->
+                        <a href="/product/<%= product.id %>" class="view-details-link">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
+
+                        <!-- Cart Controls -->
                         <div class="cart-controls">
                             <button class="qty-btn qty-minus" data-product-id="<%= product.id %>" disabled>
                                 <i class="fas fa-minus"></i>

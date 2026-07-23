@@ -58,6 +58,23 @@
         font-size: 0.95rem;
     }
 
+    /* Variant Info (Size & Color) */
+    .cart-item .item-details .variant-info {
+        font-size: 0.8rem;
+        color: #718096;
+        margin-top: 2px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .cart-item .item-details .variant-info span {
+        background: #f7fafc;
+        padding: 1px 10px;
+        border-radius: 10px;
+        border: 1px solid #edf2f7;
+    }
+
     .cart-item .item-controls {
         display: flex;
         align-items: center;
@@ -491,6 +508,17 @@
                 <div class="item-details">
                     <div class="item-name"><%= item.name %></div>
                     <div class="item-price">BDT. <%= item.price.toFixed(2) %></div>
+                    <!-- ✅ Variant Info (Size & Color) -->
+                    <% if (item.size || item.color) { %>
+                        <div class="variant-info">
+                            <% if (item.color) { %>
+                                <span><i class="fas fa-palette"></i> <%= item.color %></span>
+                            <% } %>
+                            <% if (item.size) { %>
+                                <span><i class="fas fa-ruler"></i> <%= item.size %></span>
+                            <% } %>
+                        </div>
+                    <% } %>
                 </div>
                 <div class="item-controls">
                     <button class="qty-btn qty-minus" data-product-id="<%= item.id %>" <%= item.quantity <= 1 ? 'disabled' : '' %>>

@@ -92,12 +92,14 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", userSchema);
 
-// Product Schema
+// Product Schema (UPDATED with multiple images, sizes, colors)
 const productSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     price: { type: Number, required: true },
+    originalPrice: { type: Number, default: null },
     imagePath: { type: String, default: '/uploads/default.jpg' },
+    images: [{ type: String, default: [] }],
     category: { type: String, default: 'General' },
     stock: { 
         type: Number, 
@@ -109,6 +111,10 @@ const productSchema = new mongoose.Schema({
         enum: ['in_stock', 'low_stock', 'out_of_stock'],
         default: 'out_of_stock'
     },
+    colors: [{ type: String, default: [] }],
+    sizes: [{ type: String, default: [] }],
+    reviews: { type: Number, default: 0 },
+    rating: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
@@ -147,7 +153,9 @@ const saleSchema = new mongoose.Schema({
         name: { type: String },
         price: { type: Number },
         quantity: { type: Number },
-        total: { type: Number }
+        total: { type: Number },
+        size: { type: String, default: '' },
+        color: { type: String, default: '' }
     }],
     lastUpdatedBy: { type: String },
     lastUpdatedByRole: { type: String },
@@ -155,7 +163,7 @@ const saleSchema = new mongoose.Schema({
 });
 const Sale = mongoose.model("Sale", saleSchema);
 
-// Cart Schema
+// Cart Schema (UPDATED with size and color)
 const cartSchema = new mongoose.Schema({
     userId: { type: String, required: true, unique: true },
     items: [{
@@ -163,13 +171,15 @@ const cartSchema = new mongoose.Schema({
         name: { type: String, required: true },
         price: { type: Number, required: true },
         quantity: { type: Number, required: true, min: 1 },
-        imagePath: { type: String, default: '' }
+        imagePath: { type: String, default: '' },
+        size: { type: String, default: '' },
+        color: { type: String, default: '' }
     }],
     updatedAt: { type: Date, default: Date.now }
 });
 const Cart = mongoose.model("Cart", cartSchema);
 
-// Guest Cart Schema
+// Guest Cart Schema (UPDATED with size and color)
 const guestCartSchema = new mongoose.Schema({
     guestSessionId: { type: String, required: true, unique: true },
     items: [{
@@ -177,7 +187,9 @@ const guestCartSchema = new mongoose.Schema({
         name: { type: String, required: true },
         price: { type: Number, required: true },
         quantity: { type: Number, required: true, min: 1 },
-        imagePath: { type: String, default: '' }
+        imagePath: { type: String, default: '' },
+        size: { type: String, default: '' },
+        color: { type: String, default: '' }
     }],
     updatedAt: { type: Date, default: Date.now }
 });
@@ -196,12 +208,13 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Cloudinary Storage for Products
+// Cloudinary Storage for Products (Multiple Images)
 const productStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'bagnest_products',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif']
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif'],
+    transformation: [{ width: 500, height: 500, crop: 'limit' }]
   },
 });
 
@@ -210,15 +223,22 @@ const avatarStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'bagnest_avatars',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp']
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+    transformation: [{ width: 200, height: 200, crop: 'thumb', gravity: 'face' }]
   },
 });
 
-// Multer Upload (Products)
-const upload = multer({ 
+// Multer Upload (Multiple Products Images)
+const uploadMultiple = multer({ 
   storage: productStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-});
+}).array('productImages', 5); // Max 5 images
+
+// Multer Upload (Single Product Image - for backward compatibility)
+const uploadSingle = multer({ 
+  storage: productStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }
+}).single('newProductImage');
 
 // Multer Upload (Avatar)
 const avatarUpload = multer({ 
@@ -500,7 +520,9 @@ async function loadUserCart(req, user) {
                             name: guestItem.name,
                             price: guestItem.price || 0,
                             quantity: guestItem.quantity || 1,
-                            imagePath: guestItem.imagePath || '/uploads/default.jpg'
+                            imagePath: guestItem.imagePath || '/uploads/default.jpg',
+                            size: guestItem.size || '',
+                            color: guestItem.color || ''
                         });
                     }
                 });
@@ -747,7 +769,7 @@ app.post("/register", async (req, res) => {
 });
 
 // ==========================================
-// LOGIN - COMPLETELY REWRITTEN
+// LOGIN
 // ==========================================
 app.get("/login", (req, res) => {
     console.log('🔐 GET /login called');
@@ -769,7 +791,6 @@ app.post("/login", async (req, res) => {
     console.log('📝 Username received:', username);
     console.log('📝 Password received:', password ? '***' : 'empty');
     
-    // Validation
     if (!username || !password) {
         console.log('❌ Missing username or password');
         return res.render("login", {
@@ -780,7 +801,6 @@ app.post("/login", async (req, res) => {
     }
 
     try {
-        // Find user
         console.log('🔍 Searching for user in database...');
         const matchingUser = await User.findOne({
             username: { $regex: new RegExp(`^${username.trim()}$`, "i") }
@@ -796,11 +816,8 @@ app.post("/login", async (req, res) => {
         }
 
         console.log('✅ User found:', matchingUser.username);
-        console.log('🔑 Stored password:', matchingUser.password);
-        console.log('🔑 Provided password:', password);
         console.log('🔑 Match result:', matchingUser.password === password);
 
-        // Check password
         if (matchingUser.password !== password) {
             console.log('❌ Password mismatch for:', matchingUser.username);
             return res.render("login", {
@@ -812,7 +829,6 @@ app.post("/login", async (req, res) => {
 
         console.log('✅ Password matched!');
 
-        // Create session
         const isSuperAdmin = matchingUser.username === 'superadmin' || 
                            (matchingUser.profile && matchingUser.profile.isSuperAdmin === true);
 
@@ -828,7 +844,6 @@ app.post("/login", async (req, res) => {
         console.log('👤 Session user set:', req.session.user.username);
         console.log('🔑 Session ID:', req.session.id);
 
-        // Save session
         req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
@@ -841,7 +856,6 @@ app.post("/login", async (req, res) => {
 
             console.log('✅ Session saved successfully');
 
-            // Determine redirect URL
             let redirectUrl = redirect || "/";
             if (isSuperAdmin) {
                 redirectUrl = "/superadmin/dashboard";
@@ -914,6 +928,26 @@ app.get("/", async (req, res) => {
     console.error("Home error:", err);
     res.status(500).send("Internal server error");
   }
+});
+
+// ---------- PRODUCT DETAILS PAGE ----------
+app.get("/product/:productId", async (req, res) => {
+    try {
+        const product = await Product.findOne({ id: req.params.productId });
+        
+        if (!product) {
+            return res.status(404).send("Product not found");
+        }
+        
+        res.render("product-details", {
+            product: product,
+            user: req.session.user || null,
+            isGuest: !req.session.user
+        });
+    } catch (err) {
+        console.error("Product details error:", err);
+        res.status(500).send("Internal server error");
+    }
 });
 
 // ---------- CART PAGE ----------
@@ -1025,7 +1059,7 @@ app.get("/terminal", requireCashierOrAdmin, async (req, res) => {
 
 // ---------- CART APIs ----------
 app.post("/api/cart/add", async (req, res) => {
-  const { productId, quantity = 1 } = req.body;
+  const { productId, quantity = 1, size = '', color = '' } = req.body;
   
   try {
     const targetProduct = await getProductById(productId);
@@ -1042,7 +1076,7 @@ app.post("/api/cart/add", async (req, res) => {
         req.session.cart = [];
       }
 
-      const existingItem = req.session.cart.find(item => item.id === productId);
+      const existingItem = req.session.cart.find(item => item.id === productId && item.size === size && item.color === color);
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
@@ -1051,7 +1085,9 @@ app.post("/api/cart/add", async (req, res) => {
           name: targetProduct.name,
           price: parseFloat(targetProduct.price),
           quantity: quantity,
-          imagePath: targetProduct.imagePath || ''
+          imagePath: targetProduct.imagePath || '',
+          size: size || '',
+          color: color || ''
         });
       }
 
@@ -1073,7 +1109,7 @@ app.post("/api/cart/add", async (req, res) => {
       let guestCart = await getGuestCart(guestSessionId);
       let items = guestCart ? guestCart.items : [];
 
-      const existingItem = items.find(item => item.id === productId);
+      const existingItem = items.find(item => item.id === productId && item.size === size && item.color === color);
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
@@ -1082,7 +1118,9 @@ app.post("/api/cart/add", async (req, res) => {
           name: targetProduct.name,
           price: parseFloat(targetProduct.price),
           quantity: quantity,
-          imagePath: targetProduct.imagePath || ''
+          imagePath: targetProduct.imagePath || '',
+          size: size || '',
+          color: color || ''
         });
       }
 
@@ -1302,7 +1340,9 @@ app.post("/api/cart/checkout", async (req, res) => {
           name: p.name || 'Product',
           price: p.price || 0,
           quantity: p.quantity || 1,
-          total: (p.price || 0) * (p.quantity || 1)
+          total: (p.price || 0) * (p.quantity || 1),
+          size: p.size || '',
+          color: p.color || ''
         }))
       });
     });
@@ -1449,7 +1489,6 @@ app.post("/api/profile/avatar", requireAuth, avatarUpload.single('avatar'), asyn
       user.profile = {};
     }
     
-    // Update avatar with Cloudinary URL
     user.profile.avatar = req.file.path;
     await user.save();
     req.session.user.profile.avatar = user.profile.avatar;
@@ -1682,24 +1721,42 @@ app.get("/admin/inventory", requireAdmin, async (req, res) => {
   }
 });
 
-// ---------- PRODUCT CREATE (CLOUDINARY) ----------
-app.post("/product/create", requireAdmin, upload.single("newProductImage"), async (req, res) => {
-  const { newProductName, newProductPrice, newProductStock } = req.body;
-
-  if (!req.file) {
-    return res.status(400).send("Product image is required.");
-  }
+// ---------- PRODUCT CREATE (MULTIPLE IMAGES + VARIANTS) ----------
+app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
+  const { 
+    newProductName, 
+    newProductPrice, 
+    newProductStock,
+    colors,
+    sizes,
+    originalPrice
+  } = req.body;
 
   try {
     const stock = parseInt(newProductStock) || 0;
+    
+    let mainImage = '/uploads/default.jpg';
+    let allImages = [];
+    
+    if (req.files && req.files.length > 0) {
+      mainImage = req.files[0].path;
+      allImages = req.files.map(file => file.path);
+    }
+    
+    const colorArray = colors ? colors.split(',').map(c => c.trim()).filter(c => c) : [];
+    const sizeArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s) : [];
     
     const newProduct = new Product({
       id: "PROD-" + Date.now(),
       name: newProductName,
       price: parseFloat(newProductPrice),
+      originalPrice: originalPrice ? parseFloat(originalPrice) : null,
       stock: stock,
       stockStatus: stock > 0 ? (stock <= 5 ? 'low_stock' : 'in_stock') : 'out_of_stock',
-      imagePath: req.file.path, // Cloudinary URL
+      imagePath: mainImage,
+      images: allImages,
+      colors: colorArray,
+      sizes: sizeArray
     });
 
     await newProduct.save();
@@ -1711,9 +1768,17 @@ app.post("/product/create", requireAdmin, upload.single("newProductImage"), asyn
   }
 });
 
-// ---------- PRODUCT UPDATE (CLOUDINARY) ----------
-app.post("/product/update", requireAdmin, upload.single("updateProductImage"), async (req, res) => {
-  const { productId, updateProductName, updateProductPrice, updateProductStock } = req.body;
+// ---------- PRODUCT UPDATE (MULTIPLE IMAGES + VARIANTS) ----------
+app.post("/product/update", requireAdmin, uploadMultiple, async (req, res) => {
+  const { 
+    productId, 
+    updateProductName, 
+    updateProductPrice, 
+    updateProductStock,
+    updateColors,
+    updateSizes,
+    updateOriginalPrice
+  } = req.body;
 
   try {
     const stock = parseInt(updateProductStock) || 0;
@@ -1721,12 +1786,16 @@ app.post("/product/update", requireAdmin, upload.single("updateProductImage"), a
     const updateFields = {
       name: updateProductName,
       price: parseFloat(updateProductPrice),
+      originalPrice: updateOriginalPrice ? parseFloat(updateOriginalPrice) : null,
       stock: stock,
-      stockStatus: stock > 0 ? (stock <= 5 ? 'low_stock' : 'in_stock') : 'out_of_stock'
+      stockStatus: stock > 0 ? (stock <= 5 ? 'low_stock' : 'in_stock') : 'out_of_stock',
+      colors: updateColors ? updateColors.split(',').map(c => c.trim()).filter(c => c) : [],
+      sizes: updateSizes ? updateSizes.split(',').map(s => s.trim()).filter(s => s) : []
     };
 
-    if (req.file) {
-      updateFields.imagePath = req.file.path; // Cloudinary URL
+    if (req.files && req.files.length > 0) {
+      updateFields.imagePath = req.files[0].path;
+      updateFields.images = req.files.map(file => file.path);
     }
 
     const updatedProduct = await Product.findOneAndUpdate(
@@ -1742,7 +1811,7 @@ app.post("/product/update", requireAdmin, upload.single("updateProductImage"), a
             ...item,
             name: updateProductName,
             price: parseFloat(updateProductPrice),
-            imagePath: req.file ? req.file.path : item.imagePath,
+            imagePath: req.files && req.files.length > 0 ? req.files[0].path : item.imagePath,
           };
         }
         return item;
@@ -1758,6 +1827,30 @@ app.post("/product/update", requireAdmin, upload.single("updateProductImage"), a
     console.error("Product update error:", err);
     res.status(500).send("Product update operations encountered errors.");
   }
+});
+
+// ---------- GET PRODUCT BY ID (for update modal) ----------
+app.get("/api/product/:productId", requireAdmin, async (req, res) => {
+    try {
+        const product = await Product.findOne({ id: req.params.productId });
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+        res.json({
+            success: true,
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            stock: product.stock,
+            originalPrice: product.originalPrice,
+            imagePath: product.imagePath,
+            images: product.images || [],
+            colors: product.colors || [],
+            sizes: product.sizes || []
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 app.post("/product/delete", requireAdmin, async (req, res) => {
