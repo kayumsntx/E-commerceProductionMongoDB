@@ -130,6 +130,14 @@
     .create-product-form .form-group input[type="file"] {
         padding: 8px 12px;
         font-size: 0.85rem;
+        border: 2px dashed #cbd5e0;
+        background: #f7fafc;
+        cursor: pointer;
+    }
+
+    .create-product-form .form-group input[type="file"]:hover {
+        border-color: #f39c12;
+        background: #fef9e7;
     }
 
     .create-product-form .btn-submit {
@@ -152,6 +160,56 @@
     .create-product-form .btn-submit:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+    }
+
+    /* Image Preview Styles */
+    .image-preview-container {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+
+    .image-preview-container .preview-thumb {
+        width: 60px;
+        height: 60px;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .image-preview-container .preview-thumb:hover {
+        border-color: #f39c12;
+        transform: scale(1.05);
+    }
+
+    .image-preview-container .preview-count {
+        font-size: 0.8rem;
+        color: #2b6cb0;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #ebf8ff;
+        padding: 4px 12px;
+        border-radius: 12px;
+    }
+
+    .file-label-with-count {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .file-label-with-count .file-count {
+        background: #f39c12;
+        color: white;
+        padding: 0px 10px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 700;
     }
 
    
@@ -378,6 +436,13 @@
     .admin-product-card details .edit-form .form-group input[type="file"] {
         padding: 6px 10px;
         font-size: 0.75rem;
+        border: 2px dashed #cbd5e0;
+        background: #f7fafc;
+        cursor: pointer;
+    }
+
+    .admin-product-card details .edit-form .form-group input[type="file"]:hover {
+        border-color: #f39c12;
     }
 
     .admin-product-card details .edit-form .btn-update {
@@ -520,6 +585,11 @@
         .admin-product-card .product-image {
             height: 140px;
         }
+
+        .image-preview-container .preview-thumb {
+            width: 45px;
+            height: 45px;
+        }
     }
 </style>
 
@@ -542,7 +612,7 @@
         <h3>
             <i class="fas fa-plus-circle"></i> Create New Product
         </h3>
-        <form action="/product/create" method="POST" enctype="multipart/form-data" class="create-product-form">
+        <form action="/product/create" method="POST" enctype="multipart/form-data" class="create-product-form" id="createProductForm">
             <div class="form-group">
                 <label><i class="fas fa-tag"></i> Product Name</label>
                 <input type="text" name="newProductName" placeholder="Enter product name..." required>
@@ -559,11 +629,21 @@
                 <label><i class="fas fa-box"></i> Stock Quantity</label>
                 <input type="number" name="newProductStock" value="10" min="0" required>
             </div>
-            <div class="form-group">
-                <label><i class="fas fa-image"></i> Product Images (Max 5)</label>
-                <input type="file" name="productImages" accept="image/*" multiple required>
-                <small style="color:#718096;font-size:0.7rem;">First image will be main</small>
+            
+            <!-- ✅ Multiple Images Upload with Preview -->
+            <div class="form-group" style="min-width: 220px;">
+                <label class="file-label-with-count">
+                    <i class="fas fa-images"></i> Product Images (Max 5)
+                    <span class="file-count" id="createFileCount">0</span>
+                </label>
+                <input type="file" name="productImages" accept="image/*" multiple required 
+                       id="createProductImages" style="padding: 8px;">
+                <small style="color:#718096;font-size:0.65rem;display:block;margin-top:3px;">
+                    <i class="fas fa-info-circle"></i> Select up to 5 images (Ctrl+Click). First is main.
+                </small>
+                <div class="image-preview-container" id="createImagePreview"></div>
             </div>
+            
             <div class="form-group">
                 <label><i class="fas fa-palette"></i> Colors (comma separated)</label>
                 <input type="text" name="colors" placeholder="e.g. Black, Dark Chocolate, White">
@@ -646,7 +726,7 @@
                             <summary>
                                 <i class="fas fa-edit"></i> Edit Product
                             </summary>
-                            <form action="/product/update" method="POST" enctype="multipart/form-data" class="edit-form">
+                            <form action="/product/update" method="POST" enctype="multipart/form-data" class="edit-form" id="updateForm_<%= product.id %>">
                                 <input type="hidden" name="productId" value="<%= product.id %>">
 
                                 <div class="form-group">
@@ -669,9 +749,18 @@
                                     <input type="number" name="updateProductStock" min="0" value="<%= product.stock || 0 %>" required>
                                 </div>
 
+                                <!-- ✅ Update - Multiple Images with Preview -->
                                 <div class="form-group">
-                                    <label><i class="fas fa-image"></i> Replace Images (Max 5)</label>
-                                    <input type="file" name="productImages" accept="image/*" multiple>
+                                    <label class="file-label-with-count">
+                                        <i class="fas fa-images"></i> Replace Images (Max 5)
+                                        <span class="file-count" id="updateFileCount_<%= product.id %>">0</span>
+                                    </label>
+                                    <input type="file" name="productImages" accept="image/*" multiple 
+                                           id="updateProductImages_<%= product.id %>" style="padding: 6px 10px;">
+                                    <small style="color:#718096;font-size:0.6rem;display:block;margin-top:2px;">
+                                        <i class="fas fa-info-circle"></i> Upload new images to replace all current images.
+                                    </small>
+                                    <div class="image-preview-container" id="updateImagePreview_<%= product.id %>"></div>
                                 </div>
 
                                 <div class="form-group">
@@ -706,6 +795,78 @@
 <script>
 $(document).ready(function() {
 
+    // ============================================
+    // CREATE FORM - Image Preview
+    // ============================================
+    $('#createProductImages').on('change', function() {
+        const preview = $('#createImagePreview');
+        preview.empty();
+        const files = this.files;
+        const fileCount = files ? files.length : 0;
+        
+        // Update count badge
+        $('#createFileCount').text(fileCount);
+        
+        if (fileCount > 0) {
+            // Show count info
+            preview.append(`
+                <span class="preview-count">
+                    <i class="fas fa-check-circle"></i> ${fileCount} image(s) selected
+                </span>
+            `);
+            
+            // Show thumbnails (max 5)
+            for (let i = 0; i < Math.min(fileCount, 5); i++) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.append(`
+                        <img src="${e.target.result}" class="preview-thumb" title="Image ${i+1}">
+                    `);
+                }
+                reader.readAsDataURL(files[i]);
+            }
+        }
+    });
+
+    // ============================================
+    // UPDATE FORM - Image Preview (for each product)
+    // ============================================
+    $(document).on('change', 'input[name="productImages"]', function() {
+        const $form = $(this).closest('form');
+        const productId = $form.find('input[name="productId"]').val();
+        const previewId = '#updateImagePreview_' + productId;
+        const countId = '#updateFileCount_' + productId;
+        const preview = $(previewId);
+        preview.empty();
+        
+        const files = this.files;
+        const fileCount = files ? files.length : 0;
+        
+        // Update count badge
+        $(countId).text(fileCount);
+        
+        if (fileCount > 0) {
+            preview.append(`
+                <span class="preview-count">
+                    <i class="fas fa-check-circle"></i> ${fileCount} new image(s)
+                </span>
+            `);
+            
+            for (let i = 0; i < Math.min(fileCount, 5); i++) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.append(`
+                        <img src="${e.target.result}" class="preview-thumb" style="border-color:#f39c12;" title="New Image ${i+1}">
+                    `);
+                }
+                reader.readAsDataURL(files[i]);
+            }
+        }
+    });
+
+    // ============================================
+    // DELETE CONFIRMATION
+    // ============================================
     $('.admin-product-card form[action="/product/delete"]').on('submit', function(e) {
         var productName = $(this).closest('.admin-product-card').find('.product-name').text().trim();
         if (!confirm('⚠️ Are you sure you want to delete "' + productName + '" permanently?\n\nThis action cannot be undone!')) {
@@ -714,15 +875,24 @@ $(document).ready(function() {
         }
     });
 
-    
+    // ============================================
+    // FILE INPUT LABEL UPDATE
+    // ============================================
     $('input[type="file"]').on('change', function() {
         var fileName = $(this).val().split('\\').pop();
-        if (fileName) {
-            $(this).prev('label').text('📎 ' + fileName);
+        var fileCount = this.files ? this.files.length : 0;
+        var $label = $(this).closest('.form-group').find('label');
+        
+        if (fileCount > 1) {
+            $label.html('<i class="fas fa-images"></i> ' + fileCount + ' images selected');
+        } else if (fileName) {
+            $label.html('<i class="fas fa-image"></i> ' + fileName);
         }
     });
 
-   
+    // ============================================
+    // NOTIFICATIONS
+    // ============================================
     var success = '<%= typeof success !== "undefined" ? success : false %>';
     var error = '<%= typeof error !== "undefined" ? error : "" %>';
 

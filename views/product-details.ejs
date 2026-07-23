@@ -536,8 +536,24 @@
                     <span class="variant-label">Select Color: <span id="selectedColor"><%= product.colors[0] %></span></span>
                     <div class="color-options">
                         <% product.colors.forEach(function(color, index) { %>
+                            <% 
+                                // ✅ Fixed: CSS color mapping
+                                var bgColor = '#718096';
+                                var borderColor = '#e2e8f0';
+                                var colorLower = color.toLowerCase();
+                                if (colorLower.includes('black')) { bgColor = '#1a202c'; borderColor = '#1a202c'; }
+                                else if (colorLower.includes('white')) { bgColor = '#f7fafc'; borderColor = '#e2e8f0'; }
+                                else if (colorLower.includes('brown')) { bgColor = '#8B6914'; }
+                                else if (colorLower.includes('blue')) { bgColor = '#3182ce'; }
+                                else if (colorLower.includes('red')) { bgColor = '#e53e3e'; }
+                                else if (colorLower.includes('green')) { bgColor = '#27ae60'; }
+                                else if (colorLower.includes('gold')) { bgColor = '#d4a017'; }
+                                else if (colorLower.includes('silver')) { bgColor = '#c0c0c0'; }
+                                else if (colorLower.includes('navy')) { bgColor = '#1a2a4a'; }
+                                else if (colorLower.includes('grey') || colorLower.includes('gray')) { bgColor = '#718096'; }
+                            %>
                             <div class="color-option <%= index === 0 ? 'active' : '' %>" 
-                                 style="background: <%= color.toLowerCase().includes('black') ? '#1a202c' : (color.toLowerCase().includes('white') ? '#f7fafc' : color.toLowerCase().includes('brown') ? '#8B6914' : color.toLowerCase().includes('blue') ? '#3182ce' : color.toLowerCase().includes('red') ? '#e53e3e' : color.toLowerCase().includes('green') ? '#27ae60' : '#718096') %>; border-color: <%= color.toLowerCase().includes('black') ? '#1a202c' : '#e2e8f0' %>;"
+                                 style="background: <%= bgColor %>; border-color: <%= borderColor %>;"
                                  onclick="selectColor('<%= color %>', this)">
                                 <span class="color-tooltip"><%= color %></span>
                             </div>
@@ -594,176 +610,171 @@
 </div>
 
 <script>
-    let currentQty = 1;
-    let selectedColor = '<%= product.colors && product.colors.length > 0 ? product.colors[0] : "" %>';
-    let selectedSize = '<%= product.sizes && product.sizes.length > 0 ? product.sizes[0] : "" %>';
-    const productId = '<%= product.id %>';
-    const maxStock = <%= product.stock %>;
+    // ✅ Fixed: JavaScript with proper error handling
+    $(document).ready(function() {
+        // ===== Variables =====
+        let currentQty = 1;
+        let selectedColor = '<%= product.colors && product.colors.length > 0 ? product.colors[0] : "" %>';
+        let selectedSize = '<%= product.sizes && product.sizes.length > 0 ? product.sizes[0] : "" %>';
+        const productId = '<%= product.id %>';
+        const maxStock = <%= product.stock || 0 %>;
 
-    // ===== Image Gallery =====
-    function changeImage(src, element) {
-        document.getElementById('mainProductImage').src = src;
-        
-        // Update active thumbnail
-        document.querySelectorAll('.thumbnail-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        element.classList.add('active');
-    }
+        // ===== Image Gallery =====
+        window.changeImage = function(src, element) {
+            document.getElementById('mainProductImage').src = src;
+            
+            document.querySelectorAll('.thumbnail-item').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        };
 
-    // ===== Color Selection =====
-    function selectColor(color, element) {
-        selectedColor = color;
-        document.getElementById('selectedColor').textContent = color;
-        
-        // Update active color
-        document.querySelectorAll('.color-option').forEach(item => {
-            item.classList.remove('active');
-        });
-        element.classList.add('active');
-    }
+        // ===== Color Selection =====
+        window.selectColor = function(color, element) {
+            selectedColor = color;
+            document.getElementById('selectedColor').textContent = color;
+            
+            document.querySelectorAll('.color-option').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        };
 
-    // ===== Size Selection =====
-    function selectSize(size, element) {
-        selectedSize = size;
-        document.getElementById('selectedSize').textContent = size;
-        
-        // Update active size
-        document.querySelectorAll('.size-option').forEach(item => {
-            item.classList.remove('active');
-        });
-        element.classList.add('active');
-    }
+        // ===== Size Selection =====
+        window.selectSize = function(size, element) {
+            selectedSize = size;
+            document.getElementById('selectedSize').textContent = size;
+            
+            document.querySelectorAll('.size-option').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        };
 
-    // ===== Quantity Controls =====
-    function increaseQuantity() {
-        if (currentQty < maxStock) {
-            currentQty++;
-            document.getElementById('productQty').textContent = currentQty;
-            updateQtyButtons();
-        } else {
-            showNotification('⚠️ Maximum stock limit reached!', 'warning');
-        }
-    }
-
-    function decreaseQuantity() {
-        if (currentQty > 1) {
-            currentQty--;
-            document.getElementById('productQty').textContent = currentQty;
-            updateQtyButtons();
-        }
-    }
-
-    function updateQtyButtons() {
-        const minusBtn = document.getElementById('qtyMinusBtn');
-        const plusBtn = document.getElementById('qtyPlusBtn');
-        minusBtn.disabled = currentQty <= 1;
-        plusBtn.disabled = currentQty >= maxStock;
-    }
-
-    // ===== Add to Cart =====
-    function addToCart() {
-        const quantity = currentQty;
-        const size = selectedSize;
-        const color = selectedColor;
-
-        // Show loading
-        const btn = document.querySelector('.btn-add-to-cart');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-
-        $.ajax({
-            url: '/api/cart/add',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ 
-                productId: productId, 
-                quantity: quantity,
-                size: size,
-                color: color
-            }),
-            success: function(response) {
-                if (response.success) {
-                    showNotification('✅ ' + quantity + ' item(s) added to cart!', 'success');
-                    updateCartCount(response.cartCount);
-                } else {
-                    showNotification('❌ Failed to add to cart', 'error');
-                }
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Add to Cart';
-            },
-            error: function() {
-                showNotification('❌ Failed to add to cart', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Add to Cart';
+        // ===== Quantity Controls =====
+        window.increaseQuantity = function() {
+            if (currentQty < maxStock) {
+                currentQty++;
+                document.getElementById('productQty').textContent = currentQty;
+                updateQtyButtons();
+            } else {
+                showNotification('⚠️ Maximum stock limit reached!', 'warning');
             }
-        });
-    }
+        };
 
-    // ===== Buy Now =====
-    function buyNow() {
-        // First add to cart, then go to cart
-        const quantity = currentQty;
-        const size = selectedSize;
-        const color = selectedColor;
+        window.decreaseQuantity = function() {
+            if (currentQty > 1) {
+                currentQty--;
+                document.getElementById('productQty').textContent = currentQty;
+                updateQtyButtons();
+            }
+        };
 
-        const btn = document.querySelector('.btn-buy-now');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        function updateQtyButtons() {
+            var minusBtn = document.getElementById('qtyMinusBtn');
+            var plusBtn = document.getElementById('qtyPlusBtn');
+            if (minusBtn) minusBtn.disabled = currentQty <= 1;
+            if (plusBtn) plusBtn.disabled = currentQty >= maxStock;
+        }
 
-        $.ajax({
-            url: '/api/cart/add',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ 
-                productId: productId, 
-                quantity: quantity,
-                size: size,
-                color: color
-            }),
-            success: function(response) {
-                if (response.success) {
-                    window.location.href = '/cart';
-                } else {
+        // ===== Add to Cart =====
+        window.addToCart = function() {
+            var quantity = currentQty;
+            var size = selectedSize;
+            var color = selectedColor;
+
+            var btn = document.querySelector('.btn-add-to-cart');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+
+            $.ajax({
+                url: '/api/cart/add',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    productId: productId, 
+                    quantity: quantity,
+                    size: size,
+                    color: color
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        showNotification('✅ ' + quantity + ' item(s) added to cart!', 'success');
+                        updateCartCount(response.cartCount);
+                    } else {
+                        showNotification('❌ Failed to add to cart', 'error');
+                    }
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Add to Cart';
+                },
+                error: function() {
+                    showNotification('❌ Failed to add to cart', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Add to Cart';
+                }
+            });
+        };
+
+        // ===== Buy Now =====
+        window.buyNow = function() {
+            var quantity = currentQty;
+            var size = selectedSize;
+            var color = selectedColor;
+
+            var btn = document.querySelector('.btn-buy-now');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            $.ajax({
+                url: '/api/cart/add',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    productId: productId, 
+                    quantity: quantity,
+                    size: size,
+                    color: color
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        window.location.href = '/cart';
+                    } else {
+                        showNotification('❌ Failed to process', 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-bolt"></i> Order Now';
+                    }
+                },
+                error: function() {
                     showNotification('❌ Failed to process', 'error');
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-bolt"></i> Order Now';
                 }
-            },
-            error: function() {
-                showNotification('❌ Failed to process', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-bolt"></i> Order Now';
+            });
+        };
+
+        // ===== Update Cart Count =====
+        function updateCartCount(count) {
+            var $badge = $('#cartCount');
+            $badge.text(count);
+            if (count === 0) {
+                $badge.addClass('zero');
+            } else {
+                $badge.removeClass('zero');
             }
-        });
-    }
-
-    // ===== Update Cart Count =====
-    function updateCartCount(count) {
-        const $badge = $('#cartCount');
-        $badge.text(count);
-        if (count === 0) {
-            $badge.addClass('zero');
-        } else {
-            $badge.removeClass('zero');
         }
-    }
 
-    // ===== Notification =====
-    function showNotification(message, type) {
-        if (typeof window.showNotification === 'function') {
-            window.showNotification(message, type);
-        } else {
-            alert(message);
+        // ===== Notification =====
+        function showNotification(message, type) {
+            if (typeof window.showNotification === 'function') {
+                window.showNotification(message, type);
+            } else {
+                alert(message);
+            }
         }
-    }
 
-    // ===== Initialize =====
-    $(document).ready(function() {
-        // Initialize quantity buttons
+        // ===== Initialize =====
         updateQtyButtons();
         
-        // Get cart count
         $.ajax({
             url: '/api/cart/view',
             type: 'GET',
