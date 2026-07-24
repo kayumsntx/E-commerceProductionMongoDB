@@ -2238,8 +2238,11 @@ app.get("/api/order/courier-status/:saleId", requireAdmin, async (req, res) => {
 
     res.json({ success: true, status: newStatus });
   } catch (err) {
-    console.error("Steadfast status check error:", err.message);
-    res.status(500).json({ success: false, message: err.response?.message || err.message || "Failed to check courier status" });
+    console.error("❌ Steadfast full error object:", err.response || err);
+    res.status(500).json({
+      success: false,
+      message: err.response?.data?.message || err.message || "Failed to send order to Steadfast"
+    });
   }
 });
 
