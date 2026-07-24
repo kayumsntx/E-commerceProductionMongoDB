@@ -8,7 +8,7 @@
 // Credentials are read from .env (STEADFAST_BASE_URL / STEADFAST_API_KEY /
 // STEADFAST_SECRET_KEY) — never hardcode them here.
 
-const BASE_URL = process.env.STEADFAST_BASE_URL || "https://portal.steadfast.com.bd/api/v1";
+const BASE_URL = process.env.STEADFAST_BASE_URL || "https://portal.packzy.com/api/v1";
 const API_KEY = process.env.STEADFAST_API_KEY;
 const SECRET_KEY = process.env.STEADFAST_SECRET_KEY;
 
