@@ -51,7 +51,7 @@
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 16px;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         padding: 16px;
         background: #f7fafc;
         border-radius: 12px;
@@ -76,6 +76,55 @@
         color: #1a202c;
     }
 
+    /* নতুন কুরিয়ার ইনফো বক্সের ডিজাইন */
+    .courier-info {
+        background: #f0fff4;
+        border: 1px solid #c6f6d5;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .courier-info .details h4 {
+        margin: 0 0 8px 0;
+        color: #276749;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .courier-info .details p {
+        margin: 4px 0;
+        color: #2f855a;
+        font-size: 0.95rem;
+    }
+
+    .courier-btn {
+        background: #38a169;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(56, 161, 105, 0.2);
+    }
+
+    .courier-btn:hover {
+        background: #2f855a;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(56, 161, 105, 0.3);
+    }
 
     .tracking-steps {
         display: flex;
@@ -345,7 +394,7 @@
             <div class="info-item">
                 <span class="label"><i class="fas fa-tag"></i> Status</span>
                 <span class="value">
-                    <span class="status-badge <%= currentStatus.toLowerCase() %>">
+                    <span class="status-badge <%= currentStatus.toLowerCase() %>" style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
                         <%= currentStatus %>
                     </span>
                 </span>
@@ -355,6 +404,23 @@
                 <span class="value" style="color: #2b6cb0;">BDT. <%= order.totalAmount.toFixed(2) %></span>
             </div>
         </div>
+
+        <!-- 🚀 NEW: Steadfast Courier Info Box 🚀 -->
+        <% if (order.courier && order.courier.consignmentId) { %>
+            <div class="courier-info">
+                <div class="details">
+                    <h4><i class="fas fa-shipping-fast"></i> Courier Delivery Info</h4>
+                    <p><strong>Tracking No:</strong> <%= order.courier.trackingCode %></p>
+                    <p><strong>Current Status:</strong> <span style="text-transform: capitalize;"><%= order.courier.status || 'Pending' %></span></p>
+                </div>
+                <% if (order.courier.trackingCode) { %>
+                    <a href="https://steadfast.com.bd/t/<%= order.courier.trackingCode %>" target="_blank" class="courier-btn">
+                        <i class="fas fa-location-arrow"></i> Track Live Location
+                    </a>
+                <% } %>
+            </div>
+        <% } %>
+        <!-- 🚀 END Courier Info Box 🚀 -->
 
   
         <% if (currentStatus.toLowerCase() === 'cancelled') { %>
