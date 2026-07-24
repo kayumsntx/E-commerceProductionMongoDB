@@ -914,8 +914,8 @@ $(document).ready(function() {
             const p = parseFloat($row.find('.variant-price-input').val()) || 0;
             total += s;
             variants.push({
-                color: $row.data('color') || '',
-                size: $row.data('size') || '',
+                color: $row.attr('data-color') || '',
+                size: $row.attr('data-size') || '',
                 stock: s,
                 price: p
             });
@@ -939,7 +939,7 @@ $(document).ready(function() {
         const state = window.variantStockState[scope];
         $container.find('.variant-row').each(function () {
             const $row = $(this);
-            const key = ($row.data('color') || '') + '||' + ($row.data('size') || '');
+            const key = ($row.attr('data-color') || '') + '||' + ($row.attr('data-size') || '');
             state[key] = {
                 stock: parseInt($row.find('.variant-stock-input').val()) || 0,
                 price: parseFloat($row.find('.variant-price-input').val()) || 0
@@ -999,7 +999,12 @@ $(document).ready(function() {
     // starts pre-filled with its saved variants) then render it once on load
     $('.variant-grid-container').each(function () {
         const scope = $(this).data('scope');
-        const initial = $(this).data('initialVariants') || [];
+        let initial = [];
+        try {
+            initial = JSON.parse(this.getAttribute('data-initial-variants') || '[]');
+        } catch (e) {
+            initial = [];
+        }
         window.variantStockState[scope] = {};
         initial.forEach(function (v) {
             const key = (v.color || '') + '||' + (v.size || '');

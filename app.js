@@ -1852,8 +1852,8 @@ app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
         const parsed = JSON.parse(variantsData);
         if (Array.isArray(parsed)) {
           variantArray = parsed.map(v => ({
-            color: (v.color || '').trim(),
-            size: (v.size || '').trim(),
+            color: String(v.color || '').trim(),
+            size: String(v.size || '').trim(),
             stock: Math.max(0, parseInt(v.stock) || 0),
             price: Math.max(0, parseFloat(v.price) || 0),
             originalPrice: Math.max(0, parseFloat(v.originalPrice) || 0)
@@ -1910,8 +1910,8 @@ app.post("/product/update", requireAdmin, uploadMultiple, async (req, res) => {
         const parsed = JSON.parse(variantsData);
         if (Array.isArray(parsed)) {
           variantArray = parsed.map(v => ({
-            color: (v.color || '').trim(),
-            size: (v.size || '').trim(),
+            color: String(v.color || '').trim(),
+            size: String(v.size || '').trim(),
             stock: Math.max(0, parseInt(v.stock) || 0),
             price: Math.max(0, parseFloat(v.price) || 0),
             originalPrice: Math.max(0, parseFloat(v.originalPrice) || 0)
