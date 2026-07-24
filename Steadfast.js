@@ -1,5 +1,5 @@
 // ==========================================
-// STEADFAST COURIER API CLIENT
+// STEADFAST COURIER API CLIENT in Node.js
 // ==========================================
 // Docs (community-documented, Steadfast doesn't publish a public portal):
 // Base URL: https://portal.steadfast.com.bd/api/v1
