@@ -508,14 +508,17 @@
                 <span>(<%= product.reviews || 0 %> Reviews)</span>
             </div>
 
-            <!-- Price -->
-            <div class="price-section">
-                <span class="current-price">BDT. <%= product.price.toFixed(2) %></span>
+            <!-- Price (updated live by JS as color/size are picked) -->
+            <div class="price-section" id="priceSection">
+                <span class="current-price" id="currentPriceEl">BDT. <%= product.price.toFixed(2) %></span>
                 <% if (product.originalPrice && product.originalPrice > product.price) { 
                     var discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
                 %>
-                    <span class="original-price">BDT. <%= product.originalPrice.toFixed(2) %></span>
-                    <span class="discount-badge">-<%= discount %>% OFF</span>
+                    <span class="original-price" id="originalPriceEl">BDT. <%= product.originalPrice.toFixed(2) %></span>
+                    <span class="discount-badge" id="discountBadgeEl">-<%= discount %>% OFF</span>
+                <% } else { %>
+                    <span class="original-price" id="originalPriceEl" style="display:none;"></span>
+                    <span class="discount-badge" id="discountBadgeEl" style="display:none;"></span>
                 <% } %>
             </div>
 
@@ -623,6 +626,8 @@
         let selectedSize = '<%= product.sizes && product.sizes.length > 0 ? product.sizes[0] : "" %>';
         const productId = '<%= product.id %>';
         const flatStock = <%= product.stock || 0 %>; // used only when this product has no variants
+        const basePrice = <%= product.price || 0 %>;
+        const baseOriginalPrice = <%= (product.originalPrice && product.originalPrice > product.price) ? product.originalPrice : 0 %>;
         let productVariants = [];
         try {
             productVariants = JSON.parse(document.getElementById('product-variants-data').textContent || '[]');
@@ -640,6 +645,17 @@
             return match ? (match.stock || 0) : 0;
         }
 
+        // Returns { price, originalPrice } for a given size/color combo.
+        // A variant only overrides the base price when it has its own price > 0.
+        function getComboPrice(size, color) {
+            const match = (productVariants || []).find(function (v) {
+                return (v.size || '') === (size || '') && (v.color || '') === (color || '');
+            });
+            const price = (match && match.price > 0) ? match.price : basePrice;
+            const originalPrice = (match && match.originalPrice > 0) ? match.originalPrice : baseOriginalPrice;
+            return { price: price, originalPrice: originalPrice };
+        }
+
         let maxStock = getComboStock(selectedSize, selectedColor);
 
         // ===== Image Gallery =====
@@ -652,7 +668,7 @@
             element.classList.add('active');
         };
 
-        // ===== Stock status + button state for the currently selected combo =====
+        // ===== Stock + price + button state for the currently selected combo =====
         function refreshStockUI() {
             maxStock = getComboStock(selectedSize, selectedColor);
             if (currentQty > maxStock) currentQty = maxStock > 0 ? 1 : 0;
@@ -661,6 +677,29 @@
             const $box = document.getElementById('stockStatusBox');
             const $qty = document.getElementById('productQty');
             if ($qty) $qty.textContent = currentQty;
+
+            // ---- Price for the selected combo ----
+            const combo = getComboPrice(selectedSize, selectedColor);
+            const $currentPriceEl = document.getElementById('currentPriceEl');
+            const $originalPriceEl = document.getElementById('originalPriceEl');
+            const $discountBadgeEl = document.getElementById('discountBadgeEl');
+
+            if ($currentPriceEl) $currentPriceEl.textContent = 'BDT. ' + combo.price.toFixed(2);
+
+            if (combo.originalPrice && combo.originalPrice > combo.price) {
+                const discountPct = Math.round(((combo.originalPrice - combo.price) / combo.originalPrice) * 100);
+                if ($originalPriceEl) {
+                    $originalPriceEl.textContent = 'BDT. ' + combo.originalPrice.toFixed(2);
+                    $originalPriceEl.style.display = '';
+                }
+                if ($discountBadgeEl) {
+                    $discountBadgeEl.textContent = '-' + discountPct + '% OFF';
+                    $discountBadgeEl.style.display = '';
+                }
+            } else {
+                if ($originalPriceEl) $originalPriceEl.style.display = 'none';
+                if ($discountBadgeEl) $discountBadgeEl.style.display = 'none';
+            }
 
             if ($box) {
                 $box.classList.remove('in-stock', 'low-stock');

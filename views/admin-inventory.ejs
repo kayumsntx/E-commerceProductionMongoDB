@@ -261,6 +261,14 @@
         font-size: 0.8rem;
     }
 
+    .variant-stock-table input.variant-price-input {
+        width: 90px;
+        padding: 4px 6px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+        font-size: 0.8rem;
+    }
+
     .file-label-with-count {
         display: flex;
         align-items: center;
@@ -723,7 +731,7 @@
                 <label><i class="fas fa-boxes-stacked"></i> Stock Per Variant</label>
                 <div class="variant-grid-container" id="create_variantGrid" data-scope="create" data-initial-variants='[]' style="display:none;"></div>
                 <small style="color:#718096;font-size:0.65rem;display:block;margin-top:3px;">
-                    <i class="fas fa-info-circle"></i> Fill Colors and/or Sizes above to enter stock for each combination separately.
+                    <i class="fas fa-info-circle"></i> Fill Colors and/or Sizes above to enter stock (and optionally a different price) for each combination.
                 </small>
             </div>
             <input type="hidden" name="variantsData" id="create_variantsData" value="[]">
@@ -880,13 +888,16 @@
 $(document).ready(function() {
 
     // ============================================
-    // PER SIZE+COLOR STOCK GRID (CREATE + UPDATE FORMS)
+    // PER SIZE+COLOR STOCK + PRICE GRID (CREATE + UPDATE FORMS)
     // ============================================
-    // Builds a small table with one stock input per Color x Size combination,
-    // whenever the admin fills in Colors and/or Sizes. Keeps previously typed
-    // stock numbers when the grid is regenerated (e.g. admin adds one more
-    // size), and writes the result into a hidden JSON field (variantsData)
-    // plus auto-sums the total into the "Total Stock" field.
+    // Builds a small table with a Stock input and a Price input per Color x
+    // Size combination, whenever the admin fills in Colors and/or Sizes.
+    // Keeps previously typed numbers when the grid is regenerated (e.g.
+    // admin adds one more size), and writes the result into a hidden JSON
+    // field (variantsData) plus auto-sums the total into "Total Stock".
+    // Price column: leave blank/0 to just use the product's base price for
+    // that combination; only set it if that specific color/size should cost
+    // something different.
 
     window.variantStockState = window.variantStockState || {};
 
@@ -897,13 +908,16 @@ $(document).ready(function() {
 
         let total = 0;
         const variants = [];
-        $container.find('.variant-stock-input').each(function () {
-            const s = parseInt($(this).val()) || 0;
+        $container.find('.variant-row').each(function () {
+            const $row = $(this);
+            const s = parseInt($row.find('.variant-stock-input').val()) || 0;
+            const p = parseFloat($row.find('.variant-price-input').val()) || 0;
             total += s;
             variants.push({
-                color: $(this).data('color') || '',
-                size: $(this).data('size') || '',
-                stock: s
+                color: $row.data('color') || '',
+                size: $row.data('size') || '',
+                stock: s,
+                price: p
             });
         });
         $stockInput.val(total);
@@ -923,13 +937,17 @@ $(document).ready(function() {
         // Remember what's already on screen before we throw the grid away and rebuild it
         if (!window.variantStockState[scope]) window.variantStockState[scope] = {};
         const state = window.variantStockState[scope];
-        $container.find('.variant-stock-input').each(function () {
-            const key = ($(this).data('color') || '') + '||' + ($(this).data('size') || '');
-            state[key] = parseInt($(this).val()) || 0;
+        $container.find('.variant-row').each(function () {
+            const $row = $(this);
+            const key = ($row.data('color') || '') + '||' + ($row.data('size') || '');
+            state[key] = {
+                stock: parseInt($row.find('.variant-stock-input').val()) || 0,
+                price: parseFloat($row.find('.variant-price-input').val()) || 0
+            };
         });
 
         if (colorArr.length === 0 && sizeArr.length === 0) {
-            // No colors/sizes at all -> plain single-stock product, no grid needed
+            // No colors/sizes at all -> plain single-stock/single-price product, no grid needed
             $container.empty().hide();
             $stockInput.prop('readonly', false);
             $hidden.val('[]');
@@ -942,18 +960,20 @@ $(document).ready(function() {
         let html = '<table class="variant-stock-table"><thead><tr>';
         if (colorArr.length) html += '<th>Color</th>';
         if (sizeArr.length) html += '<th>Size</th>';
-        html += '<th>Stock</th></tr></thead><tbody>';
+        html += '<th>Stock</th><th>Price (optional)</th></tr></thead><tbody>';
 
         colorsForGrid.forEach(function (color) {
             sizesForGrid.forEach(function (size) {
                 const key = color + '||' + size;
-                const val = state.hasOwnProperty(key) ? state[key] : 0;
-                html += '<tr>';
+                const existing = state.hasOwnProperty(key) ? state[key] : { stock: 0, price: 0 };
+                const safeColor = String(color).replace(/"/g, '&quot;');
+                const safeSize = String(size).replace(/"/g, '&quot;');
+                html += '<tr class="variant-row" data-color="' + safeColor + '" data-size="' + safeSize + '">';
                 if (colorArr.length) html += '<td>' + color + '</td>';
                 if (sizeArr.length) html += '<td>' + size + '</td>';
-                html += '<td><input type="number" min="0" class="variant-stock-input" value="' + val +
-                        '" data-color="' + String(color).replace(/"/g, '&quot;') +
-                        '" data-size="' + String(size).replace(/"/g, '&quot;') + '"></td>';
+                html += '<td><input type="number" min="0" class="variant-stock-input" value="' + existing.stock + '"></td>';
+                html += '<td><input type="number" min="0" step="0.01" class="variant-price-input" placeholder="base price" value="' +
+                        (existing.price > 0 ? existing.price : '') + '"></td>';
                 html += '</tr>';
             });
         });
@@ -969,8 +989,8 @@ $(document).ready(function() {
         rebuildVariantGrid($(this).data('scope'));
     });
 
-    // Re-sum totals whenever a stock cell in any grid changes
-    $(document).on('input change', '.variant-stock-input', function () {
+    // Re-sum totals whenever a stock or price cell in any grid changes
+    $(document).on('input change', '.variant-stock-input, .variant-price-input', function () {
         const scope = $(this).closest('.variant-grid-container').data('scope');
         recomputeVariantTotals(scope);
     });
@@ -983,7 +1003,7 @@ $(document).ready(function() {
         window.variantStockState[scope] = {};
         initial.forEach(function (v) {
             const key = (v.color || '') + '||' + (v.size || '');
-            window.variantStockState[scope][key] = v.stock || 0;
+            window.variantStockState[scope][key] = { stock: v.stock || 0, price: v.price || 0 };
         });
         rebuildVariantGrid(scope);
     });

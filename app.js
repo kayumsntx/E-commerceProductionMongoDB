@@ -118,7 +118,10 @@ const productSchema = new mongoose.Schema({
     variants: [{
         color: { type: String, default: '' },
         size: { type: String, default: '' },
-        stock: { type: Number, default: 0, min: 0 }
+        stock: { type: Number, default: 0, min: 0 },
+        // Optional per-variant price override. 0/blank = use the product's base price.
+        price: { type: Number, default: 0, min: 0 },
+        originalPrice: { type: Number, default: 0, min: 0 }
     }],
     reviews: { type: Number, default: 0 },
     rating: { type: Number, default: 0 },
@@ -370,6 +373,20 @@ function getAvailableStock(product, size, color) {
     if (variant) return variant.stock;
     if (product.variants && product.variants.length > 0) return 0; // has variants but this combo doesn't exist
     return product.stock || 0;
+}
+
+// Returns the effective selling price for a specific size/color pick.
+// A variant only overrides the base price when its own price is > 0.
+function getVariantPrice(product, size, color) {
+    const variant = findVariant(product, size, color);
+    if (variant && variant.price > 0) return variant.price;
+    return product.price;
+}
+
+function getVariantOriginalPrice(product, size, color) {
+    const variant = findVariant(product, size, color);
+    if (variant && variant.originalPrice > 0) return variant.originalPrice;
+    return product.originalPrice || null;
 }
 
 async function getAllProducts() {
@@ -1146,7 +1163,7 @@ app.post("/api/cart/add", async (req, res) => {
         req.session.cart.push({
           id: targetProduct.id,
           name: targetProduct.name,
-          price: parseFloat(targetProduct.price),
+          price: getVariantPrice(targetProduct, size, color),
           quantity: quantity,
           imagePath: targetProduct.imagePath || '',
           size: size || '',
@@ -1179,7 +1196,7 @@ app.post("/api/cart/add", async (req, res) => {
         items.push({
           id: targetProduct.id,
           name: targetProduct.name,
-          price: parseFloat(targetProduct.price),
+          price: getVariantPrice(targetProduct, size, color),
           quantity: quantity,
           imagePath: targetProduct.imagePath || '',
           size: size || '',
@@ -1837,7 +1854,9 @@ app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
           variantArray = parsed.map(v => ({
             color: (v.color || '').trim(),
             size: (v.size || '').trim(),
-            stock: Math.max(0, parseInt(v.stock) || 0)
+            stock: Math.max(0, parseInt(v.stock) || 0),
+            price: Math.max(0, parseFloat(v.price) || 0),
+            originalPrice: Math.max(0, parseFloat(v.originalPrice) || 0)
           }));
         }
       } catch (e) {
@@ -1893,7 +1912,9 @@ app.post("/product/update", requireAdmin, uploadMultiple, async (req, res) => {
           variantArray = parsed.map(v => ({
             color: (v.color || '').trim(),
             size: (v.size || '').trim(),
-            stock: Math.max(0, parseInt(v.stock) || 0)
+            stock: Math.max(0, parseInt(v.stock) || 0),
+            price: Math.max(0, parseFloat(v.price) || 0),
+            originalPrice: Math.max(0, parseFloat(v.originalPrice) || 0)
           }));
         }
       } catch (e) {
