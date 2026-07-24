@@ -526,7 +526,7 @@
                 <% } else if (product.stock <= 5) { %>
                     <i class="fas fa-exclamation-triangle"></i> Limited Stock - Only <%= product.stock %> left!
                 <% } else { %>
-                    <i class="fas fa-check-circle"></i> In Stock
+                    <i class="fas fa-check-circle"></i> In Stock (<%= product.stock %> available)
                 <% } %>
             </div>
 
@@ -671,7 +671,7 @@
                     $box.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Limited Stock - Only ' + maxStock + ' left!';
                 } else {
                     $box.classList.add('in-stock');
-                    $box.innerHTML = '<i class="fas fa-check-circle"></i> In Stock';
+                    $box.innerHTML = '<i class="fas fa-check-circle"></i> In Stock (' + maxStock + ' available)';
                 }
             }
 
