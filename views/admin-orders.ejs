@@ -370,6 +370,20 @@
                                             <i class="fas fa-file-invoice"></i> Slip
                                         </button>
                                     <% } %>
+
+                                    <% if (order.courier && order.courier.consignmentId) { %>
+                                        <div style="margin-top: 4px; font-size: 0.7rem; color: #2f855a;">
+                                            <i class="fas fa-truck"></i> Sent (CID: <%= order.courier.consignmentId %>)
+                                            <% if (order.courier.trackingCode) { %>
+                                                <br>
+                                                <a href="https://steadfast.com.bd/t/<%= order.courier.trackingCode %>" target="_blank" style="color:#2b6cb0;">Track: <%= order.courier.trackingCode %></a>
+                                            <% } %>
+                                        </div>
+                                    <% } else if (statusLower === 'processing' || statusLower === 'shipped') { %>
+                                        <button class="action-btn ship" onclick="sendToCourier('<%= order.saleId %>')" style="margin-top: 2px;">
+                                            <i class="fas fa-shipping-fast"></i> Send to Courier
+                                        </button>
+                                    <% } %>
                                 </td>
                             </tr>
                         <% }) %>
@@ -410,6 +424,43 @@
     }
 
     
+    function sendToCourier(saleId) {
+        if (!confirm('Send this order to Steadfast Courier now? This cannot be undone from here.')) {
+            return;
+        }
+
+        const $btn = $(`button[onclick*="sendToCourier('${saleId}')"]`);
+        const originalText = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: '/api/order/send-courier',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ saleId: saleId }),
+            success: function(response) {
+                if (response.success) {
+                    showNotification('✅ ' + response.message + (response.trackingCode ? ' — Tracking: ' + response.trackingCode : ''), 'success');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 800);
+                } else {
+                    showNotification('❌ ' + response.message, 'error');
+                    $btn.html(originalText);
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.message || 'Failed to send order to courier';
+                showNotification('❌ ' + msg, 'error');
+                $btn.html(originalText);
+                $btn.prop('disabled', false);
+            }
+        });
+    }
+
+
     function updateOrderStatus(saleId, status) {
         const statusLabels = {
             'pending': 'Pending',
