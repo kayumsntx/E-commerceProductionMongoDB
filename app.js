@@ -2243,26 +2243,7 @@ app.get("/api/order/courier-status/:saleId", requireAdmin, async (req, res) => {
   }
 });
 
-// Check (or refresh) delivery status for an order already sent to Steadfast
-app.get("/api/order/courier-status/:saleId", requireAdmin, async (req, res) => {
-  try {
-    const sale = await Sale.findOne({ saleId: req.params.saleId });
-    if (!sale || !sale.courier || !sale.courier.consignmentId) {
-      return res.status(404).json({ success: false, message: "This order hasn't been sent to courier yet" });
-    }
 
-    const response = await steadfast.statusByConsignmentId(sale.courier.consignmentId);
-    const newStatus = response.delivery_status || response.status || sale.courier.status;
-
-    sale.courier.status = newStatus;
-    await sale.save();
-
-    res.json({ success: true, status: newStatus });
-  } catch (err) {
-    console.error("Steadfast status check error:", err.message);
-    res.status(500).json({ success: false, message: err.response?.message || err.message || "Failed to check courier status" });
-  }
-});
 
 
 app.get("/admin/stock-report", requireAdmin, async (req, res) => {
