@@ -519,8 +519,8 @@
                 <% } %>
             </div>
 
-            <!-- Stock Status -->
-            <div class="stock-status <%= product.stock > 5 ? 'in-stock' : (product.stock > 0 ? 'low-stock' : '') %>">
+            <!-- Stock Status (updated live by JS as color/size are picked) -->
+            <div class="stock-status <%= product.stock > 5 ? 'in-stock' : (product.stock > 0 ? 'low-stock' : '') %>" id="stockStatusBox">
                 <% if (product.stock <= 0) { %>
                     <i class="fas fa-times-circle"></i> Out of Stock
                 <% } else if (product.stock <= 5) { %>
@@ -529,6 +529,9 @@
                     <i class="fas fa-check-circle"></i> In Stock
                 <% } %>
             </div>
+
+            <!-- Per size+color stock, read by the script below -->
+            <script id="product-variants-data" type="application/json"><%- JSON.stringify(product.variants || []) %></script>
 
             <!-- Color Selection -->
             <% if (product.colors && product.colors.length > 0) { %>
@@ -553,6 +556,7 @@
                                 else if (colorLower.includes('grey') || colorLower.includes('gray')) { bgColor = '#718096'; }
                             %>
                             <div class="color-option <%= index === 0 ? 'active' : '' %>" 
+                                 data-color="<%= color %>"
                                  style="background: <%= bgColor %>; border-color: <%= borderColor %>;"
                                  onclick="selectColor('<%= color %>', this)">
                                 <span class="color-tooltip"><%= color %></span>
@@ -569,6 +573,7 @@
                     <div class="size-options">
                         <% product.sizes.forEach(function(size, index) { %>
                             <button class="size-option <%= index === 0 ? 'active' : '' %>"
+                                    data-size="<%= size %>"
                                     onclick="selectSize('<%= size %>', this)">
                                 <%= size %>
                             </button>
@@ -617,7 +622,25 @@
         let selectedColor = '<%= product.colors && product.colors.length > 0 ? product.colors[0] : "" %>';
         let selectedSize = '<%= product.sizes && product.sizes.length > 0 ? product.sizes[0] : "" %>';
         const productId = '<%= product.id %>';
-        const maxStock = <%= product.stock || 0 %>;
+        const flatStock = <%= product.stock || 0 %>; // used only when this product has no variants
+        let productVariants = [];
+        try {
+            productVariants = JSON.parse(document.getElementById('product-variants-data').textContent || '[]');
+        } catch (e) {
+            productVariants = [];
+        }
+
+        // Returns stock for a given size/color combo, falling back to the
+        // flat product stock when this product has no per-variant data.
+        function getComboStock(size, color) {
+            if (!productVariants || productVariants.length === 0) return flatStock;
+            const match = productVariants.find(function (v) {
+                return (v.size || '') === (size || '') && (v.color || '') === (color || '');
+            });
+            return match ? (match.stock || 0) : 0;
+        }
+
+        let maxStock = getComboStock(selectedSize, selectedColor);
 
         // ===== Image Gallery =====
         window.changeImage = function(src, element) {
@@ -629,6 +652,46 @@
             element.classList.add('active');
         };
 
+        // ===== Stock status + button state for the currently selected combo =====
+        function refreshStockUI() {
+            maxStock = getComboStock(selectedSize, selectedColor);
+            if (currentQty > maxStock) currentQty = maxStock > 0 ? 1 : 0;
+            if (currentQty < 1 && maxStock > 0) currentQty = 1;
+
+            const $box = document.getElementById('stockStatusBox');
+            const $qty = document.getElementById('productQty');
+            if ($qty) $qty.textContent = currentQty;
+
+            if ($box) {
+                $box.classList.remove('in-stock', 'low-stock');
+                if (maxStock <= 0) {
+                    $box.innerHTML = '<i class="fas fa-times-circle"></i> Out of Stock';
+                } else if (maxStock <= 5) {
+                    $box.classList.add('low-stock');
+                    $box.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Limited Stock - Only ' + maxStock + ' left!';
+                } else {
+                    $box.classList.add('in-stock');
+                    $box.innerHTML = '<i class="fas fa-check-circle"></i> In Stock';
+                }
+            }
+
+            const addBtn = document.querySelector('.btn-add-to-cart');
+            const buyBtn = document.querySelector('.btn-buy-now');
+            if (addBtn) addBtn.disabled = maxStock <= 0;
+            if (buyBtn) buyBtn.disabled = maxStock <= 0;
+
+            // Grey out size options that have 0 stock for the currently selected color
+            if (productVariants && productVariants.length > 0) {
+                document.querySelectorAll('.size-option').forEach(function (btn) {
+                    const size = btn.getAttribute('data-size') || '';
+                    const stockForThisSize = getComboStock(size, selectedColor);
+                    btn.classList.toggle('out-of-stock', stockForThisSize <= 0);
+                });
+            }
+
+            updateQtyButtons();
+        }
+
         // ===== Color Selection =====
         window.selectColor = function(color, element) {
             selectedColor = color;
@@ -638,10 +701,15 @@
                 item.classList.remove('active');
             });
             element.classList.add('active');
+            refreshStockUI();
         };
 
         // ===== Size Selection =====
         window.selectSize = function(size, element) {
+            if (element.classList.contains('out-of-stock')) {
+                showNotification('⚠️ This size is out of stock in the selected color.', 'warning');
+                return;
+            }
             selectedSize = size;
             document.getElementById('selectedSize').textContent = size;
             
@@ -649,6 +717,7 @@
                 item.classList.remove('active');
             });
             element.classList.add('active');
+            refreshStockUI();
         };
 
         // ===== Quantity Controls =====
@@ -676,6 +745,9 @@
             if (minusBtn) minusBtn.disabled = currentQty <= 1;
             if (plusBtn) plusBtn.disabled = currentQty >= maxStock;
         }
+
+        // Set the initial state (also greys out any zero-stock sizes for the default color)
+        refreshStockUI();
 
         // ===== Add to Cart =====
         window.addToCart = function() {

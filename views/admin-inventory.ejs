@@ -222,6 +222,45 @@
         background: #c53030;
     }
 
+    .variant-grid-wrap {
+        min-width: 100%;
+    }
+
+    .variant-grid-container {
+        margin-top: 6px;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .variant-stock-table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.8rem;
+    }
+
+    .variant-stock-table th {
+        text-align: left;
+        background: #f7fafc;
+        color: #4a5568;
+        padding: 6px 10px;
+        border: 1px solid #e2e8f0;
+        font-weight: 600;
+    }
+
+    .variant-stock-table td {
+        padding: 4px 10px;
+        border: 1px solid #e2e8f0;
+        color: #2d3748;
+    }
+
+    .variant-stock-table input.variant-stock-input {
+        width: 70px;
+        padding: 4px 6px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+        font-size: 0.8rem;
+    }
+
     .file-label-with-count {
         display: flex;
         align-items: center;
@@ -652,8 +691,8 @@
                 <input type="number" name="originalPrice" step="0.01" placeholder="e.g. 1650.00">
             </div>
             <div class="form-group">
-                <label><i class="fas fa-box"></i> Stock Quantity</label>
-                <input type="number" name="newProductStock" value="10" min="0" required>
+                <label><i class="fas fa-box"></i> Total Stock <small style="font-weight:400;color:#718096;">(auto-summed if you set per-variant stock below)</small></label>
+                <input type="number" name="newProductStock" id="create_stockInput" value="10" min="0" required>
             </div>
             
             <!-- ✅ Multiple Images Upload with Preview -->
@@ -672,12 +711,23 @@
             
             <div class="form-group">
                 <label><i class="fas fa-palette"></i> Colors (comma separated)</label>
-                <input type="text" name="colors" placeholder="e.g. Black, Dark Chocolate, White">
+                <input type="text" name="colors" id="create_colorsInput" class="variant-colors-input" data-scope="create" placeholder="e.g. Black, Dark Chocolate, White">
             </div>
             <div class="form-group">
                 <label><i class="fas fa-ruler"></i> Sizes (comma separated)</label>
-                <input type="text" name="sizes" placeholder="e.g. 40, 41, 42, 43">
+                <input type="text" name="sizes" id="create_sizesInput" class="variant-sizes-input" data-scope="create" placeholder="e.g. 40, 41, 42, 43">
             </div>
+
+            <!-- ✅ Per size+color stock grid, auto-built from Colors/Sizes above -->
+            <div class="form-group variant-grid-wrap">
+                <label><i class="fas fa-boxes-stacked"></i> Stock Per Variant</label>
+                <div class="variant-grid-container" id="create_variantGrid" data-scope="create" data-initial-variants='[]' style="display:none;"></div>
+                <small style="color:#718096;font-size:0.65rem;display:block;margin-top:3px;">
+                    <i class="fas fa-info-circle"></i> Fill Colors and/or Sizes above to enter stock for each combination separately.
+                </small>
+            </div>
+            <input type="hidden" name="variantsData" id="create_variantsData" value="[]">
+
             <button type="submit" class="btn-submit">
                 <i class="fas fa-save"></i> Save Product
             </button>
@@ -771,8 +821,8 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label><i class="fas fa-box"></i> Stock Quantity</label>
-                                    <input type="number" name="updateProductStock" min="0" value="<%= product.stock || 0 %>" required>
+                                    <label><i class="fas fa-box"></i> Total Stock <small style="font-weight:400;color:#718096;">(auto-summed if variants below are set)</small></label>
+                                    <input type="number" name="updateProductStock" id="update_<%= product.id %>_stockInput" min="0" value="<%= product.stock || 0 %>" required>
                                 </div>
 
                                 <!-- ✅ Update - Multiple Images with Preview -->
@@ -791,13 +841,21 @@
 
                                 <div class="form-group">
                                     <label><i class="fas fa-palette"></i> Colors</label>
-                                    <input type="text" name="updateColors" value="<%= product.colors ? product.colors.join(', ') : '' %>">
+                                    <input type="text" name="updateColors" id="update_<%= product.id %>_colorsInput" class="variant-colors-input" data-scope="update_<%= product.id %>" value="<%= product.colors ? product.colors.join(', ') : '' %>">
                                 </div>
 
                                 <div class="form-group">
                                     <label><i class="fas fa-ruler"></i> Sizes</label>
-                                    <input type="text" name="updateSizes" value="<%= product.sizes ? product.sizes.join(', ') : '' %>">
+                                    <input type="text" name="updateSizes" id="update_<%= product.id %>_sizesInput" class="variant-sizes-input" data-scope="update_<%= product.id %>" value="<%= product.sizes ? product.sizes.join(', ') : '' %>">
                                 </div>
+
+                                <!-- ✅ Per size+color stock grid, pre-filled from saved variants -->
+                                <div class="form-group variant-grid-wrap">
+                                    <label><i class="fas fa-boxes-stacked"></i> Stock Per Variant</label>
+                                    <div class="variant-grid-container" id="update_<%= product.id %>_variantGrid" data-scope="update_<%= product.id %>"
+                                         data-initial-variants='<%- JSON.stringify(product.variants || []).replace(/'/g, "&#39;") %>' style="display:none;"></div>
+                                </div>
+                                <input type="hidden" name="variantsData" id="update_<%= product.id %>_variantsData" value="[]">
 
                                 <button type="submit" class="btn-update">
                                     <i class="fas fa-sync-alt"></i> Update Record
@@ -820,6 +878,115 @@
 
 <script>
 $(document).ready(function() {
+
+    // ============================================
+    // PER SIZE+COLOR STOCK GRID (CREATE + UPDATE FORMS)
+    // ============================================
+    // Builds a small table with one stock input per Color x Size combination,
+    // whenever the admin fills in Colors and/or Sizes. Keeps previously typed
+    // stock numbers when the grid is regenerated (e.g. admin adds one more
+    // size), and writes the result into a hidden JSON field (variantsData)
+    // plus auto-sums the total into the "Total Stock" field.
+
+    window.variantStockState = window.variantStockState || {};
+
+    function recomputeVariantTotals(scope) {
+        const $container = $('#' + scope + '_variantGrid');
+        const $stockInput = $('#' + scope + '_stockInput');
+        const $hidden = $('#' + scope + '_variantsData');
+
+        let total = 0;
+        const variants = [];
+        $container.find('.variant-stock-input').each(function () {
+            const s = parseInt($(this).val()) || 0;
+            total += s;
+            variants.push({
+                color: $(this).data('color') || '',
+                size: $(this).data('size') || '',
+                stock: s
+            });
+        });
+        $stockInput.val(total);
+        $hidden.val(JSON.stringify(variants));
+    }
+
+    function rebuildVariantGrid(scope) {
+        const $colors = $('#' + scope + '_colorsInput');
+        const $sizes = $('#' + scope + '_sizesInput');
+        const $container = $('#' + scope + '_variantGrid');
+        const $stockInput = $('#' + scope + '_stockInput');
+        const $hidden = $('#' + scope + '_variantsData');
+
+        const colorArr = ($colors.val() || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        const sizeArr = ($sizes.val() || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+
+        // Remember what's already on screen before we throw the grid away and rebuild it
+        if (!window.variantStockState[scope]) window.variantStockState[scope] = {};
+        const state = window.variantStockState[scope];
+        $container.find('.variant-stock-input').each(function () {
+            const key = ($(this).data('color') || '') + '||' + ($(this).data('size') || '');
+            state[key] = parseInt($(this).val()) || 0;
+        });
+
+        if (colorArr.length === 0 && sizeArr.length === 0) {
+            // No colors/sizes at all -> plain single-stock product, no grid needed
+            $container.empty().hide();
+            $stockInput.prop('readonly', false);
+            $hidden.val('[]');
+            return;
+        }
+
+        const colorsForGrid = colorArr.length ? colorArr : [''];
+        const sizesForGrid = sizeArr.length ? sizeArr : [''];
+
+        let html = '<table class="variant-stock-table"><thead><tr>';
+        if (colorArr.length) html += '<th>Color</th>';
+        if (sizeArr.length) html += '<th>Size</th>';
+        html += '<th>Stock</th></tr></thead><tbody>';
+
+        colorsForGrid.forEach(function (color) {
+            sizesForGrid.forEach(function (size) {
+                const key = color + '||' + size;
+                const val = state.hasOwnProperty(key) ? state[key] : 0;
+                html += '<tr>';
+                if (colorArr.length) html += '<td>' + color + '</td>';
+                if (sizeArr.length) html += '<td>' + size + '</td>';
+                html += '<td><input type="number" min="0" class="variant-stock-input" value="' + val +
+                        '" data-color="' + String(color).replace(/"/g, '&quot;') +
+                        '" data-size="' + String(size).replace(/"/g, '&quot;') + '"></td>';
+                html += '</tr>';
+            });
+        });
+        html += '</tbody></table>';
+
+        $container.show().html(html);
+        $stockInput.prop('readonly', true);
+        recomputeVariantTotals(scope);
+    }
+
+    // Rebuild the grid whenever Colors/Sizes text changes
+    $(document).on('input', '.variant-colors-input, .variant-sizes-input', function () {
+        rebuildVariantGrid($(this).data('scope'));
+    });
+
+    // Re-sum totals whenever a stock cell in any grid changes
+    $(document).on('input change', '.variant-stock-input', function () {
+        const scope = $(this).closest('.variant-grid-container').data('scope');
+        recomputeVariantTotals(scope);
+    });
+
+    // Seed each grid (create form starts empty; each product's edit form
+    // starts pre-filled with its saved variants) then render it once on load
+    $('.variant-grid-container').each(function () {
+        const scope = $(this).data('scope');
+        const initial = $(this).data('initialVariants') || [];
+        window.variantStockState[scope] = {};
+        initial.forEach(function (v) {
+            const key = (v.color || '') + '||' + (v.size || '');
+            window.variantStockState[scope][key] = v.stock || 0;
+        });
+        rebuildVariantGrid(scope);
+    });
 
     // ============================================
     // MULTI-IMAGE PICKING (CREATE + UPDATE FORMS)

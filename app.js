@@ -113,6 +113,13 @@ const productSchema = new mongoose.Schema({
     },
     colors: [{ type: String, default: [] }],
     sizes: [{ type: String, default: [] }],
+    // NEW: per size+color stock. If a product has no variants, the flat
+    // `stock` field above is used as before (fully backward compatible).
+    variants: [{
+        color: { type: String, default: '' },
+        size: { type: String, default: '' },
+        stock: { type: Number, default: 0, min: 0 }
+    }],
     reviews: { type: Number, default: 0 },
     rating: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
@@ -333,6 +340,38 @@ async function createUser(userData) {
 }
 
 // Product functions
+// ---- Variant (size+color) stock helpers ----
+function computeStockStatus(stock) {
+    if (stock <= 0) return 'out_of_stock';
+    if (stock <= 5) return 'low_stock';
+    return 'in_stock';
+}
+
+// Sum of all variant stocks. If a product has no variants, returns null
+// so callers know to fall back to the flat `stock` field instead.
+function totalStockFromVariants(variants) {
+    if (!variants || variants.length === 0) return null;
+    return variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+}
+
+// Finds the variant matching a given size/color pair. Empty string matches
+// products that only vary by size (color: '') or only by color (size: '').
+function findVariant(product, size, color) {
+    if (!product.variants || product.variants.length === 0) return null;
+    return product.variants.find(v =>
+        (v.size || '') === (size || '') && (v.color || '') === (color || '')
+    ) || null;
+}
+
+// Returns how many units are available for a specific size/color pick.
+// Falls back to the flat product.stock when the product has no variants.
+function getAvailableStock(product, size, color) {
+    const variant = findVariant(product, size, color);
+    if (variant) return variant.stock;
+    if (product.variants && product.variants.length > 0) return 0; // has variants but this combo doesn't exist
+    return product.stock || 0;
+}
+
 async function getAllProducts() {
     return await Product.find({ isActive: true });
 }
@@ -1068,6 +1107,30 @@ app.post("/api/cart/add", async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
+    // Validate against the specific size+color combo's stock (or flat stock
+    // if this product has no variants), accounting for what's already in cart.
+    const requestedQty = parseInt(quantity) || 1;
+    const availableStock = getAvailableStock(targetProduct, size, color);
+
+    let alreadyInCart = 0;
+    if (req.session.user && req.session.cart) {
+      const existing = req.session.cart.find(item => item.id === productId && item.size === size && item.color === color);
+      if (existing) alreadyInCart = existing.quantity;
+    } else if (!req.session.user) {
+      const guestCart = await getGuestCart(req.guestSessionId);
+      if (guestCart) {
+        const existing = guestCart.items.find(item => item.id === productId && item.size === size && item.color === color);
+        if (existing) alreadyInCart = existing.quantity;
+      }
+    }
+
+    if (availableStock <= 0 || (alreadyInCart + requestedQty) > availableStock) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient stock for ${targetProduct.name}${size || color ? ' (' + [color, size].filter(Boolean).join(' / ') + ')' : ''}. Available: ${availableStock}`
+      });
+    }
+
     let cartCount = 0;
     let isGuest = false;
 
@@ -1271,30 +1334,48 @@ app.post("/api/cart/checkout", async (req, res) => {
       (sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0
     );
 
-    // Stock check and deduct
+    // Stock check and deduct (per size+color variant when the product has them)
     for (let item of userCart) {
       const product = await Product.findOne({ id: item.id });
       if (product) {
-        const newStock = product.stock - item.quantity;
-        if (newStock < 0) {
-          return res.status(400).json({
-            success: false,
-            message: `Insufficient stock for ${product.name}. Available: ${product.stock}`
-          });
-        }
-        
-        product.stock = newStock;
-        
-        if (newStock <= 0) {
-          product.stockStatus = 'out_of_stock';
-        } else if (newStock <= 5) {
-          product.stockStatus = 'low_stock';
+        if (product.variants && product.variants.length > 0) {
+          const variant = product.variants.find(v =>
+            (v.size || '') === (item.size || '') && (v.color || '') === (item.color || '')
+          );
+
+          if (!variant) {
+            return res.status(400).json({
+              success: false,
+              message: `${product.name}: selected size/color (${item.size || '-'} / ${item.color || '-'}) is not available.`
+            });
+          }
+
+          const newVariantStock = variant.stock - item.quantity;
+          if (newVariantStock < 0) {
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for ${product.name} (${item.color || '-'} / ${item.size || '-'}). Available: ${variant.stock}`
+            });
+          }
+
+          variant.stock = newVariantStock;
+          product.stock = totalStockFromVariants(product.variants);
+          product.stockStatus = computeStockStatus(product.stock);
         } else {
-          product.stockStatus = 'in_stock';
+          const newStock = product.stock - item.quantity;
+          if (newStock < 0) {
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for ${product.name}. Available: ${product.stock}`
+            });
+          }
+
+          product.stock = newStock;
+          product.stockStatus = computeStockStatus(newStock);
         }
-        
+
         await product.save();
-        console.log(`📦 Stock updated: ${product.name} → ${newStock}`);
+        console.log(`📦 Stock updated: ${product.name} → ${product.stock}`);
       }
     }
 
@@ -1729,12 +1810,11 @@ app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
     newProductStock,
     colors,
     sizes,
-    originalPrice
+    originalPrice,
+    variantsData
   } = req.body;
 
   try {
-    const stock = parseInt(newProductStock) || 0;
-    
     let mainImage = '/uploads/default.jpg';
     let allImages = [];
     
@@ -1745,18 +1825,41 @@ app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
     
     const colorArray = colors ? colors.split(',').map(c => c.trim()).filter(c => c) : [];
     const sizeArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s) : [];
-    
+
+    // Per size+color stock grid sent from the admin form (JSON string).
+    // Falls back to the single "Stock Quantity" field when no grid was built
+    // (e.g. product has no colors/sizes at all).
+    let variantArray = [];
+    if (variantsData) {
+      try {
+        const parsed = JSON.parse(variantsData);
+        if (Array.isArray(parsed)) {
+          variantArray = parsed.map(v => ({
+            color: (v.color || '').trim(),
+            size: (v.size || '').trim(),
+            stock: Math.max(0, parseInt(v.stock) || 0)
+          }));
+        }
+      } catch (e) {
+        console.error("variantsData parse error:", e);
+      }
+    }
+
+    const computedTotal = totalStockFromVariants(variantArray);
+    const stock = computedTotal !== null ? computedTotal : (parseInt(newProductStock) || 0);
+
     const newProduct = new Product({
       id: "PROD-" + Date.now(),
       name: newProductName,
       price: parseFloat(newProductPrice),
       originalPrice: originalPrice ? parseFloat(originalPrice) : null,
       stock: stock,
-      stockStatus: stock > 0 ? (stock <= 5 ? 'low_stock' : 'in_stock') : 'out_of_stock',
+      stockStatus: computeStockStatus(stock),
       imagePath: mainImage,
       images: allImages,
       colors: colorArray,
-      sizes: sizeArray
+      sizes: sizeArray,
+      variants: variantArray
     });
 
     await newProduct.save();
@@ -1777,20 +1880,39 @@ app.post("/product/update", requireAdmin, uploadMultiple, async (req, res) => {
     updateProductStock,
     updateColors,
     updateSizes,
-    updateOriginalPrice
+    updateOriginalPrice,
+    variantsData
   } = req.body;
 
   try {
-    const stock = parseInt(updateProductStock) || 0;
-    
+    let variantArray = [];
+    if (variantsData) {
+      try {
+        const parsed = JSON.parse(variantsData);
+        if (Array.isArray(parsed)) {
+          variantArray = parsed.map(v => ({
+            color: (v.color || '').trim(),
+            size: (v.size || '').trim(),
+            stock: Math.max(0, parseInt(v.stock) || 0)
+          }));
+        }
+      } catch (e) {
+        console.error("variantsData parse error:", e);
+      }
+    }
+
+    const computedTotal = totalStockFromVariants(variantArray);
+    const stock = computedTotal !== null ? computedTotal : (parseInt(updateProductStock) || 0);
+
     const updateFields = {
       name: updateProductName,
       price: parseFloat(updateProductPrice),
       originalPrice: updateOriginalPrice ? parseFloat(updateOriginalPrice) : null,
       stock: stock,
-      stockStatus: stock > 0 ? (stock <= 5 ? 'low_stock' : 'in_stock') : 'out_of_stock',
+      stockStatus: computeStockStatus(stock),
       colors: updateColors ? updateColors.split(',').map(c => c.trim()).filter(c => c) : [],
-      sizes: updateSizes ? updateSizes.split(',').map(s => s.trim()).filter(s => s) : []
+      sizes: updateSizes ? updateSizes.split(',').map(s => s.trim()).filter(s => s) : [],
+      variants: variantArray
     };
 
     if (req.files && req.files.length > 0) {
