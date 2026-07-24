@@ -2159,7 +2159,8 @@ app.post("/api/order/status", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/order/send-courier", requireAdmin, async (req, res) => {
-  const { saleId, codAmount } = req.body;
+  // ১. এখানে 'phone' এবং 'address' যুক্ত করা হয়েছে, যা পপ-আপ ফর্ম থেকে আসবে
+  const { saleId, codAmount, phone, address } = req.body;
 
   try {
     const sale = await Sale.findOne({ saleId: saleId });
@@ -2178,8 +2179,6 @@ app.post("/api/order/send-courier", requireAdmin, async (req, res) => {
       ? sale.products.map(p => `${p.name}${p.size ? ' (Size: ' + p.size + ')' : ''}${p.color ? ' (Color: ' + p.color + ')' : ''} x${p.quantity}`).join(', ')
       : sale.productName;
 
-    // Defaults to the full order total as COD; pass codAmount explicitly
-    // (e.g. 0) from the admin panel for orders that were already prepaid.
     const cod = (codAmount !== undefined && codAmount !== null && codAmount !== '')
       ? parseFloat(codAmount) || 0
       : sale.totalAmount;
@@ -2187,8 +2186,9 @@ app.post("/api/order/send-courier", requireAdmin, async (req, res) => {
     const response = await steadfast.createOrder({
       invoice: sale.saleId,
       recipient_name: sale.customerName,
-      recipient_phone: sale.customerPhone,
-      recipient_address: sale.customerAddress,
+      // ২. এখানে পপ-আপ থেকে আসা এডিট করা phone এবং address বসানো হয়েছে
+      recipient_phone: phone || sale.customerPhone || '01000000000',
+      recipient_address: address || sale.customerAddress || 'Address not provided',
       cod_amount: cod,
       item_description: itemsDescription
     });
@@ -2219,6 +2219,27 @@ app.post("/api/order/send-courier", requireAdmin, async (req, res) => {
       success: false,
       message: err.response?.message || err.message || "Failed to send order to Steadfast"
     });
+  }
+});
+
+// Check (or refresh) delivery status for an order already sent to Steadfast
+app.get("/api/order/courier-status/:saleId", requireAdmin, async (req, res) => {
+  try {
+    const sale = await Sale.findOne({ saleId: req.params.saleId });
+    if (!sale || !sale.courier || !sale.courier.consignmentId) {
+      return res.status(404).json({ success: false, message: "This order hasn't been sent to courier yet" });
+    }
+
+    const response = await steadfast.statusByConsignmentId(sale.courier.consignmentId);
+    const newStatus = response.delivery_status || response.status || sale.courier.status;
+
+    sale.courier.status = newStatus;
+    await sale.save();
+
+    res.json({ success: true, status: newStatus });
+  } catch (err) {
+    console.error("Steadfast status check error:", err.message);
+    res.status(500).json({ success: false, message: err.response?.message || err.message || "Failed to check courier status" });
   }
 });
 
