@@ -2107,51 +2107,55 @@ app.get("/admin/orders", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/order/status", requireAdmin, async (req, res) => {
-  const { saleId, status } = req.body;
-  
-  try {
-    const updatedBy = req.session.user.username;
-    const updatedByRole = req.session.user.role || 'user';
+    const { saleId, status } = req.body;
     
-    const sale = await Sale.findOne({ saleId: saleId });
-    if (!sale) {
-      return res.status(404).json({ success: false, message: "Order not found" });
+    try {
+        const updatedBy = req.session.user.username;
+        const updatedByRole = req.session.user.role || 'user';
+        
+        const sale = await Sale.findOne({ saleId: saleId });
+        if (!sale) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+        
+       
+        const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+        
+        const oldStatus = sale.status || 'Pending';
+        sale.status = formattedStatus;
+        
+        if (!sale.statusHistory) {
+            sale.statusHistory = [];
+        }
+        sale.statusHistory.push({
+            status: formattedStatus,
+            updatedBy: updatedBy,
+            updatedByRole: updatedByRole,
+            timestamp: new Date(),
+            fromStatus: oldStatus
+        });
+        
+        sale.lastUpdatedBy = updatedBy;
+        sale.lastUpdatedByRole = updatedByRole;
+        sale.lastUpdatedAt = new Date();
+        
+        await sale.save(); 
+        
+        broadcastRefresh({ action: "order_updated", saleId: saleId, status: formattedStatus });
+        
+        res.json({ 
+            success: true, 
+            message: `Order status updated to ${formattedStatus}`,
+            status: formattedStatus,
+            updatedBy: updatedBy,
+            updatedByRole: updatedByRole,
+            timestamp: new Date()
+        });
+    } catch (err) {
+        console.error("Order status update error:", err);
+        
+        res.status(500).json({ success: false, message: err.message || "Server error" });
     }
-    
-    const oldStatus = sale.status || 'Pending';
-    sale.status = status;
-    
-    if (!sale.statusHistory) {
-      sale.statusHistory = [];
-    }
-    sale.statusHistory.push({
-      status: status,
-      updatedBy: updatedBy,
-      updatedByRole: updatedByRole,
-      timestamp: new Date(),
-      fromStatus: oldStatus
-    });
-    
-    sale.lastUpdatedBy = updatedBy;
-    sale.lastUpdatedByRole = updatedByRole;
-    sale.lastUpdatedAt = new Date();
-    
-    await sale.save();
-    
-    broadcastRefresh({ action: "order_updated", saleId: saleId, status: status });
-    
-    res.json({ 
-      success: true, 
-      message: `Order status updated from ${oldStatus} to ${status}`,
-      status: status,
-      updatedBy: updatedBy,
-      updatedByRole: updatedByRole,
-      timestamp: new Date()
-    });
-  } catch (err) {
-    console.error("Order status update error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
 });
 
 app.post("/api/order/send-courier", requireAdmin, async (req, res) => {
