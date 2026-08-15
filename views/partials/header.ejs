@@ -390,6 +390,8 @@
                 <i class="fas fa-user-plus"></i> Become a Seller
             </a></li>
 
+            <li><a href="/Categories"><i class="fas fa-list"></i> Categories</a></li>
+
           
             <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.role === 'authorized_cashier' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
                 <li>
