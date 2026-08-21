@@ -390,7 +390,23 @@
                 <i class="fas fa-user-plus"></i> Become a Seller
             </a></li>
 
-            <li><a href="/Categories"><i class="fas fa-list"></i> Categories</a></li>
+            <!-- <li><a href="/Categories"><i class="fas fa-list"></i> Categories</a></li> -->
+
+            <label for="Categories"></label> 
+            <select name="Categories" id="Categories">
+                <option value="">Select a Category</option>
+                <option value="Shopping Bag's">Shopping Bag's</option>
+                <option value="Courier Poly">Courier Poly</option>
+                <option value="Sticker's">Sticker's</option>
+                <option value="Bouble Wrap">Bouble Wrap</option>
+                <option value="Card's">Card's</option>
+                <option value="Scotch Tape">Scotch Tape</option>
+                <optgroup label="Box's">
+                    <option value="1.Curtain Box">1.Curtain Box</option>
+                    <option value="2.Curtain premium Box">2.Curtain premium Box</option>
+                    <option value="3.Premium Box">3.Premium Box</option>
+                </optgroup>
+            </select>
 
           
             <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.role === 'authorized_cashier' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
