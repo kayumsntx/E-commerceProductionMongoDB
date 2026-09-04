@@ -2034,6 +2034,7 @@ app.get("/admin/users", requireAdmin, async (req, res) => {
   }
 });
 
+// ---------- UPDATE USER ROLE (Admin Only) ----------
 app.post("/api/user/role", requireAdmin, async (req, res) => {
   const { userId, role } = req.body;
   
@@ -2057,6 +2058,7 @@ app.post("/api/user/role", requireAdmin, async (req, res) => {
       });
     }
     
+    // ✅ এখানে 'seller' যোগ করুন
     const validRoles = ['user', 'authorized_cashier', 'seller', 'admin'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ success: false, message: "Invalid role" });
