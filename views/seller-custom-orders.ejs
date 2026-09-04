@@ -6,6 +6,7 @@
         margin: 30px auto;
         padding: 20px;
     }
+
     .seller-orders-container h2 {
         border-bottom: 2px solid #f39c12;
         padding-bottom: 12px;
@@ -13,25 +14,286 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        color: #1a202c;
     }
+
+    .seller-orders-container h2 i {
+        color: #f39c12;
+    }
+
     .order-card {
         background: white;
         border-radius: 12px;
         border: 1px solid #e2e8f0;
-        padding: 20px;
-        margin-bottom: 16px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
         transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
-    .order-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-    .order-card .title { font-size: 1.1rem; font-weight: 600; color: #2d3748; }
-    .order-card .meta { font-size: 0.85rem; color: #718096; margin: 6px 0; }
-    .bid-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
-    .bid-form input, .bid-form textarea { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 120px; }
-    .bid-form button { padding: 8px 20px; background: #f39c12; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
-    .bid-form button:hover { background: #e67e22; }
-    .already-bid { color: #27ae60; font-weight: 600; margin-top: 8px; }
-    .empty-state { text-align: center; padding: 60px 20px; color: #a0aec0; }
-    .empty-state i { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+    .order-card:hover {
+        box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        border-color: #f39c12;
+        transform: translateY(-2px);
+    }
+
+    .order-card .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+    .order-card .title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #2d3748;
+    }
+
+    .order-card .order-id {
+        font-size: 0.75rem;
+        color: #a0aec0;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+
+    .order-card .meta {
+        font-size: 0.85rem;
+        color: #718096;
+        margin: 4px 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px 24px;
+    }
+
+    .order-card .meta i {
+        width: 16px;
+        color: #a0aec0;
+    }
+
+    .order-card .description {
+        background: #f7fafc;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border-left: 3px solid #f39c12;
+        font-size: 0.92rem;
+        color: #4a5568;
+        line-height: 1.6;
+        margin: 10px 0 12px 0;
+    }
+
+    /* Images */
+    .order-images {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 12px 0;
+    }
+
+    .order-images .img-thumb {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .order-images .img-thumb:hover {
+        border-color: #f39c12;
+        transform: scale(1.05);
+    }
+
+    .order-images .no-image {
+        font-size: 0.85rem;
+        color: #a0aec0;
+        padding: 6px 0;
+    }
+
+    /* Bid form */
+    .bid-section {
+        background: #f7fafc;
+        border-radius: 8px;
+        padding: 16px 18px;
+        margin-top: 14px;
+        border: 1px solid #edf2f7;
+    }
+
+    .bid-section .bid-label {
+        font-weight: 600;
+        color: #2d3748;
+        display: block;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+    }
+
+    .bid-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .bid-form .form-group {
+        flex: 1 1 150px;
+        min-width: 120px;
+    }
+
+    .bid-form .form-group label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #4a5568;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 3px;
+    }
+
+    .bid-form .form-group input,
+    .bid-form .form-group textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+        background: white;
+        font-family: inherit;
+    }
+
+    .bid-form .form-group input:focus,
+    .bid-form .form-group textarea:focus {
+        border-color: #f39c12;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.15);
+    }
+
+    .bid-form .form-group textarea {
+        resize: vertical;
+        min-height: 38px;
+        height: 38px;
+    }
+
+    .bid-form .btn-bid {
+        padding: 8px 24px;
+        background: linear-gradient(45deg, #f39c12, #e67e22);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 40px;
+        white-space: nowrap;
+    }
+
+    .bid-form .btn-bid:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(243, 156, 18, 0.35);
+    }
+
+    .bid-form .btn-bid:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    .already-bid {
+        background: #f0fff4;
+        border: 1px solid #c6f6d5;
+        border-radius: 6px;
+        padding: 10px 16px;
+        color: #276749;
+        font-weight: 600;
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .already-bid i {
+        color: #27ae60;
+    }
+
+    .already-bid .bid-status {
+        font-size: 0.75rem;
+        background: #c6f6d5;
+        padding: 2px 12px;
+        border-radius: 20px;
+        color: #276749;
+        margin-left: 8px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: #a0aec0;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        display: block;
+        margin-bottom: 16px;
+        color: #e2e8f0;
+    }
+
+    .empty-state h3 {
+        color: #4a5568;
+        margin-bottom: 8px;
+    }
+
+    .empty-state p {
+        font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+        .seller-orders-container {
+            padding: 12px;
+        }
+        .order-card {
+            padding: 16px 18px;
+        }
+        .order-card .order-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .bid-form {
+            flex-direction: column;
+        }
+        .bid-form .form-group {
+            flex: 1 1 100%;
+            width: 100%;
+        }
+        .bid-form .btn-bid {
+            width: 100%;
+            justify-content: center;
+        }
+        .order-images .img-thumb {
+            width: 55px;
+            height: 55px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .order-card .title {
+            font-size: 1rem;
+        }
+        .order-card .meta {
+            font-size: 0.8rem;
+            gap: 8px;
+        }
+        .order-images .img-thumb {
+            width: 45px;
+            height: 45px;
+        }
+    }
 </style>
 
 <div class="seller-orders-container">
@@ -52,42 +314,104 @@
             }
         } catch (err) {
             console.error(err);
-            document.getElementById('ordersList').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#e53e3e;"></i><p>Failed to load orders</p></div>`;
+            document.getElementById('ordersList').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-circle" style="color:#e53e3e;"></i>
+                    <h3>Failed to load orders</h3>
+                    <p>Please refresh the page or try again later.</p>
+                </div>`;
         }
     }
 
     function renderOrders(orders) {
         const container = document.getElementById('ordersList');
         const approved = orders.filter(o => o.status === 'approved');
+        
         if (approved.length === 0) {
-            container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>No orders available for bidding right now.</p></div>`;
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h3>No orders available for bidding</h3>
+                    <p>Check back later – new custom orders will appear here once approved by admin.</p>
+                </div>`;
             return;
         }
         
         let html = '';
         approved.forEach(order => {
             const userBid = order.bids.find(b => b.sellerId === '<%= user.id %>');
+            
+            // Build images HTML
+            let imagesHtml = '';
+            if (order.images && order.images.length > 0) {
+                imagesHtml = '<div class="order-images">';
+                order.images.forEach(img => {
+                    imagesHtml += `<img src="${img}" alt="Reference image" class="img-thumb" onclick="window.open('${img}', '_blank')">`;
+                });
+                imagesHtml += '</div>';
+            } else {
+                imagesHtml = '<div class="no-image"><i class="fas fa-image"></i> No reference images</div>';
+            }
+            
+            // Bid section
+            let bidHtml = '';
+            if (userBid) {
+                bidHtml = `
+                    <div class="already-bid">
+                        <i class="fas fa-check-circle"></i>
+                        You have already placed a bid of <strong>BDT ${parseFloat(userBid.amount).toFixed(2)}</strong>
+                        <span class="bid-status">${userBid.status}</span>
+                    </div>
+                `;
+            } else {
+                bidHtml = `
+                    <div class="bid-section">
+                        <span class="bid-label"><i class="fas fa-gavel"></i> Place Your Bid</span>
+                        <form class="bid-form" onsubmit="placeBid(event, '${order.id}')">
+                            <div class="form-group">
+                                <label>Amount (BDT) *</label>
+                                <input type="number" name="amount" placeholder="e.g. 5000" required step="0.01" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Delivery Time</label>
+                                <input type="text" name="delivery" placeholder="e.g. 3-5 days">
+                            </div>
+                            <div class="form-group">
+                                <label>Note (optional)</label>
+                                <textarea name="note" placeholder="Any special info..."></textarea>
+                            </div>
+                            <button type="submit" class="btn-bid">
+                                <i class="fas fa-paper-plane"></i> Place Bid
+                            </button>
+                        </form>
+                    </div>
+                `;
+            }
+            
             html += `
                 <div class="order-card">
-                    <div class="title">${order.title}</div>
-                    <div class="meta">
-                        <i class="fas fa-user"></i> ${order.customerName} 
-                        | <i class="fas fa-calendar"></i> ${new Date(order.createdAt).toLocaleDateString()}
-                        ${order.budget ? `| <i class="fas fa-money-bill"></i> Budget: BDT ${order.budget}` : ''}
-                        ${order.deadline ? `| <i class="fas fa-clock"></i> Deadline: ${new Date(order.deadline).toLocaleDateString()}` : ''}
+                    <div class="order-header">
+                        <div>
+                            <span class="title">${order.title}</span>
+                            <span class="order-id">#${order.id}</span>
+                        </div>
+                        <span style="font-size:0.75rem; background:#ebf8ff; color:#2b6cb0; padding:2px 12px; border-radius:20px; font-weight:600;">
+                            <i class="fas fa-clock"></i> Open for bids
+                        </span>
                     </div>
-                    <div class="meta"><strong>Description:</strong> ${order.description}</div>
                     
-                    ${userBid ? `
-                        <div class="already-bid"><i class="fas fa-check-circle"></i> You have already placed a bid of BDT ${userBid.amount} (Status: ${userBid.status})</div>
-                    ` : `
-                        <form class="bid-form" onsubmit="placeBid(event, '${order.id}')">
-                            <input type="number" name="amount" placeholder="Your bid (BDT)" required step="0.01" min="1">
-                            <input type="text" name="delivery" placeholder="Delivery time (e.g. 3 days)">
-                            <textarea name="note" placeholder="Note (optional)" rows="1"></textarea>
-                            <button type="submit"><i class="fas fa-paper-plane"></i> Place Bid</button>
-                        </form>
-                    `}
+                    <div class="meta">
+                        <span><i class="fas fa-user"></i> ${order.customerName}</span>
+                        <span><i class="fas fa-calendar-alt"></i> Posted: ${new Date(order.createdAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                        ${order.budget ? `<span><i class="fas fa-money-bill-wave"></i> Budget: BDT ${parseFloat(order.budget).toFixed(2)}</span>` : ''}
+                        ${order.deadline ? `<span><i class="fas fa-hourglass-end"></i> Deadline: ${new Date(order.deadline).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' })}</span>` : ''}
+                    </div>
+                    
+                    <div class="description">${order.description}</div>
+                    
+                    ${imagesHtml}
+                    
+                    ${bidHtml}
                 </div>
             `;
         });
@@ -101,9 +425,13 @@
         const delivery = form.querySelector('input[name="delivery"]').value;
         const note = form.querySelector('textarea[name="note"]').value;
         
-        if (!amount) { alert('Please enter a bid amount'); return; }
+        if (!amount || parseFloat(amount) <= 0) {
+            alert('Please enter a valid bid amount.');
+            return;
+        }
         
-        const btn = form.querySelector('button');
+        const btn = form.querySelector('.btn-bid');
+        const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
         
@@ -121,10 +449,10 @@
                 alert('❌ ' + data.message);
             }
         } catch (err) {
-            alert('❌ Failed to place bid');
+            alert('❌ Failed to place bid. Please try again.');
         }
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Place Bid';
+        btn.innerHTML = originalText;
     }
 
     document.addEventListener('DOMContentLoaded', loadOrders);
