@@ -1372,21 +1372,26 @@ app.put("/api/admin/custom-order/:orderId/bid/:bidId", requireAdmin, async (req,
 });
 
 // ---------- VIEW CUSTOM ORDER PAGE ----------
+// ==========================================
+// CUSTOM ORDER - SINGLE VIEW (Customer/Admin/Seller)
+// ==========================================
 app.get("/custom-order/:id", requireAuth, async (req, res) => {
     try {
         const order = await CustomOrder.findOne({ id: req.params.id });
-        if (!order) return res.status(404).send("Order not found");
-        
+        if (!order) {
+            return res.status(404).send("Order not found");
+        }
+
         // Permission check
         const user = req.session.user;
         const isOwner = order.customerId === user.id;
         const isAdmin = user.role === 'admin' || user.role === 'superadmin' || user.isSuperAdmin;
         const isSeller = user.role === 'seller' || user.role === 'authorized_cashier';
-        
+
         if (!isOwner && !isAdmin && !isSeller) {
             return res.status(403).send("Access denied");
         }
-        
+
         res.render("custom-order-detail", {
             order,
             user,
@@ -1396,7 +1401,8 @@ app.get("/custom-order/:id", requireAuth, async (req, res) => {
             isGuest: false
         });
     } catch (err) {
-        res.status(500).send("Server error");
+        console.error("Custom order detail error:", err);
+        res.status(500).send("Internal Server Error");
     }
 });
 
