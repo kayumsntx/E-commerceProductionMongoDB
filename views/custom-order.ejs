@@ -96,12 +96,36 @@
         padding: 4px 14px;
         border-radius: 20px;
     }
+
+    /* রিমুভ বাটন */
+    .preview-thumb-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .preview-thumb-wrapper .preview-remove {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        text-align: center;
+        background: #e53e3e;
+        color: #fff;
+        border-radius: 50%;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .preview-thumb-wrapper .preview-remove:hover {
+        background: #c53030;
+    }
 </style>
 
 <div class="custom-order-page">
     <h2><i class="fas fa-pencil-alt"></i> Make a Custom Order</h2>
     
-    <!-- ✅ ফর্মে enctype="multipart/form-data" যোগ করতে হবে -->
     <form id="customOrderForm" enctype="multipart/form-data">
         <div class="form-group">
             <label>Order Title *</label>
@@ -128,11 +152,11 @@
             <input type="date" id="orderDeadline">
         </div>
         
-        <!-- ✅ ছবি আপলোড ফিল্ড -->
+        <!-- ✅ ছবি আপলোড ফিল্ড - একাধিক ফাইল জমা রাখার ব্যবস্থা -->
         <div class="form-group">
             <label><i class="fas fa-images"></i> Reference Images (Max 5)</label>
             <input type="file" id="orderImages" name="orderImages" accept="image/*" multiple>
-            <div class="help-text">You can upload up to 5 images for reference.</div>
+            <div class="help-text">You can upload up to 5 images. You can select multiple files at once, or add them one by one.</div>
             <div class="image-preview-container" id="imagePreview"></div>
         </div>
         
@@ -144,33 +168,92 @@
 
 <script>
     // ============================================
-    // ✅ ইমেজ প্রিভিউ
+    // ✅ একাধিক ফাইল জমা রাখার লজিক (DataTransfer ব্যবহার)
     // ============================================
-    document.getElementById('orderImages').addEventListener('change', function(e) {
-        const preview = document.getElementById('imagePreview');
-        preview.innerHTML = '';
-        const files = this.files;
-        
-        if (files.length > 0) {
-            // কাউন্ট দেখান
+    (function() {
+        const fileInput = document.getElementById('orderImages');
+        const previewContainer = document.getElementById('imagePreview');
+        let selectedFiles = []; // আমাদের নিজস্ব ফাইল অ্যারে
+
+        // ফাইল প্রিভিউ রেন্ডার করা
+        function renderPreview() {
+            previewContainer.innerHTML = '';
+            if (selectedFiles.length === 0) {
+                return;
+            }
+
+            // কাউন্ট ব্যাজ
             const countSpan = document.createElement('span');
             countSpan.className = 'preview-count';
-            countSpan.innerHTML = `<i class="fas fa-check-circle"></i> ${files.length} image(s) selected`;
-            preview.appendChild(countSpan);
+            countSpan.innerHTML = `<i class="fas fa-check-circle"></i> ${selectedFiles.length} image(s) selected`;
+            previewContainer.appendChild(countSpan);
+
+            // প্রতিটি ফাইলের জন্য থাম্বনেইল
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const wrapper = document.createElement('span');
+                    wrapper.className = 'preview-thumb-wrapper';
+
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'preview-thumb';
+                    img.title = file.name;
+                    wrapper.appendChild(img);
+
+                    // রিমুভ বাটন
+                    const removeBtn = document.createElement('span');
+                    removeBtn.className = 'preview-remove';
+                    removeBtn.textContent = '×';
+                    removeBtn.addEventListener('click', function() {
+                        selectedFiles.splice(index, 1);
+                        // আপডেট করা ফাইল লিস্ট ইনপুটে সেট করি
+                        const dt = new DataTransfer();
+                        selectedFiles.forEach(f => dt.items.add(f));
+                        fileInput.files = dt.files;
+                        renderPreview();
+                    });
+                    wrapper.appendChild(removeBtn);
+                    previewContainer.appendChild(wrapper);
+                };
+                reader.readAsDataURL(file);
+            });
         }
-        
-        for (let i = 0; i < Math.min(files.length, 5); i++) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = document.createElement('img');
-                img.src = event.target.result;
-                img.className = 'preview-thumb';
-                img.title = `Image ${i+1}`;
-                preview.appendChild(img);
+
+        // ফাইল সিলেক্ট ইভেন্ট
+        fileInput.addEventListener('change', function(e) {
+            const newFiles = Array.from(this.files);
+            if (newFiles.length === 0) return;
+
+            // নতুন ফাইলগুলো যোগ করি (ডুপ্লিকেট চেক না করলেও চলে)
+            // কিন্তু আমরা ডুপ্লিকেট এড়াতে চাইলে নাম+সাইজ চেক করতে পারি
+            newFiles.forEach(file => {
+                const isDuplicate = selectedFiles.some(f =>
+                    f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+                );
+                if (!isDuplicate && selectedFiles.length < 5) {
+                    selectedFiles.push(file);
+                }
+            });
+
+            // ম্যাক্স ৫-এর বেশি হলে কেটে ফেলি
+            if (selectedFiles.length > 5) {
+                selectedFiles = selectedFiles.slice(0, 5);
+                alert('⚠️ Maximum 5 images allowed. Extra ones ignored.');
             }
-            reader.readAsDataURL(files[i]);
-        }
-    });
+
+            // ইনপুটের files প্রপার্টি আপডেট করি (যাতে সাবমিটে সব ফাইল যায়)
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+
+            // প্রিভিউ রিফ্রেশ
+            renderPreview();
+        });
+
+        // পেজ লোড হলে প্রিভিউ ক্লিয়ার
+        renderPreview();
+    })();
 
     // ============================================
     // ✅ ফর্ম সাবমিট (FormData দিয়ে)
@@ -183,14 +266,13 @@
         const budget = document.getElementById('orderBudget').value;
         const quantity = document.getElementById('orderQuantity').value;
         const deadline = document.getElementById('orderDeadline').value;
-        const images = document.getElementById('orderImages').files;
+        const fileInput = document.getElementById('orderImages');
         
         if (!title || !description) {
             alert('Please fill in title and description.');
             return;
         }
         
-        // ✅ FormData তৈরি করুন
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
@@ -198,9 +280,10 @@
         formData.append('quantity', quantity || '1');
         formData.append('deadline', deadline || '');
         
-        // ছবি যোগ করুন
-        for (let i = 0; i < Math.min(images.length, 5); i++) {
-            formData.append('orderImages', images[i]);
+        // এখন fileInput.files-এ সব জমা করা ফাইল আছে
+        const files = fileInput.files;
+        for (let i = 0; i < Math.min(files.length, 5); i++) {
+            formData.append('orderImages', files[i]);
         }
         
         const btn = this.querySelector('.btn-submit');
@@ -210,7 +293,6 @@
         try {
             const response = await fetch('/api/custom-order/create', {
                 method: 'POST',
-                // ✅ Content-Type header সেট করবেন না (FormData নিজেই সেট করে)
                 body: formData
             });
             const data = await response.json();
