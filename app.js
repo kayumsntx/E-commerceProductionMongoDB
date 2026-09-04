@@ -2057,7 +2057,7 @@ app.post("/api/user/role", requireAdmin, async (req, res) => {
       });
     }
     
-    const validRoles = ['user', 'authorized_cashier', 'admin'];
+    const validRoles = ['user', 'authorized_cashier', 'seller', 'admin'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ success: false, message: "Invalid role" });
     }
