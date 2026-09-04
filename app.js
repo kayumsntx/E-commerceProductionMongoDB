@@ -1407,11 +1407,19 @@ app.get("/custom-order/:id", requireAuth, async (req, res) => {
 });
 
 // ---------- CUSTOM ORDER LIST (for customers) ----------
-app.get("/my-custom-orders", requireAuth, (req, res) => {
-    res.render("my-custom-orders", {
-        user: req.session.user,
-        isGuest: false
-    });
+app.get("/my-custom-orders", requireAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const orders = await CustomOrder.find({ customerId: userId }).sort({ createdAt: -1 });
+        res.render("my-custom-orders", {
+            user: req.session.user,
+            orders: orders,
+            isGuest: false
+        });
+    } catch (err) {
+        console.error("❌ Error fetching custom orders:", err);
+        res.status(500).send("Internal Server Error: " + err.message);
+    }
 });
 
 // ---------- ADMIN CUSTOM ORDER MANAGEMENT ----------
