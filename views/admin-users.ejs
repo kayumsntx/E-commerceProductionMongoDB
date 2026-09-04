@@ -97,6 +97,10 @@
         border-color: #f39c12;
     }
 
+    .user-role-select.role-seller {
+        border-color: #38a169;
+    }
+
     .user-role-select.role-admin {
         border-color: #e53e3e;
     }
@@ -141,12 +145,16 @@
         color: #975a16;
     }
 
+    .role-badge.seller {
+        background: #c6f6d5;
+        color: #276749;
+    }
+
     .role-badge.admin {
         background: #fed7d7;
         color: #9b2c2c;
     }
 
-  
     .protected-badge {
         background: #fefcbf;
         color: #975a16;
@@ -231,7 +239,6 @@
                 <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <% if (u.id !== user.id) { %>
                         <% if (u.username === 'superadmin' || u.profile?.isSuperAdmin === true) { %>
-                         
                             <span class="protected-badge">
                                 <i class="fas fa-lock lock-icon"></i> Protected
                             </span>
@@ -239,11 +246,10 @@
                                 (Cannot be modified)
                             </span>
                         <% } else { %>
-                         
                             <select class="user-role-select role-<%= u.role %>" data-user-id="<%= u.id %>" onchange="updateUserRole(this)">
                                 <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>User</option>
                                 <option value="authorized_cashier" <%= u.role === 'authorized_cashier' ? 'selected' : '' %>>Cashier</option>
-                         
+                                <option value="seller" <%= u.role === 'seller' ? 'selected' : '' %>>Seller</option>
                                 <% if (user.username === 'superadmin' || user.isSuperAdmin === true) { %>
                                     <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>Admin</option>
                                 <% } %>
@@ -269,7 +275,6 @@
 </div>
 
 <script>
-  
     function updateUserRole(select) {
         const userId = $(select).data('user-id');
         const role = $(select).val();
@@ -303,7 +308,6 @@
         $(this).data('previous-value', $(this).val());
     });
 
- 
     function deleteUser(userId) {
         if (!confirm('⚠️ Are you sure you want to delete this user? This action cannot be undone!')) {
             return;
@@ -328,7 +332,6 @@
             }
         });
     }
-
 
     function showNotification(message, type) {
         if (typeof window.showNotification === 'function') {
