@@ -1,0 +1,145 @@
+<%- include('partials/header') %>
+
+<style>
+    .custom-order-page {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .custom-order-page h2 {
+        border-bottom: 2px solid #f39c12;
+        padding-bottom: 12px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+        color: #4a5568;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+        border-color: #f39c12;
+        box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.2);
+        outline: none;
+    }
+    .form-group textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+    .btn-submit {
+        background: linear-gradient(45deg, #f39c12, #e67e22);
+        color: white;
+        border: none;
+        padding: 12px 32px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(243, 156, 18, 0.4);
+    }
+    .help-text {
+        font-size: 0.8rem;
+        color: #a0aec0;
+        margin-top: 4px;
+    }
+</style>
+
+<div class="custom-order-page">
+    <h2><i class="fas fa-pencil-alt"></i> Make a Custom Order</h2>
+    
+    <form id="customOrderForm">
+        <div class="form-group">
+            <label>Order Title *</label>
+            <input type="text" id="orderTitle" placeholder="e.g. Customized Gift Box" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Description *</label>
+            <textarea id="orderDescription" placeholder="Describe your custom order in detail..." required></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Budget (BDT)</label>
+            <input type="number" id="orderBudget" placeholder="e.g. 5000" step="0.01">
+        </div>
+        
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" id="orderQuantity" value="1" min="1">
+        </div>
+        
+        <div class="form-group">
+            <label>Deadline</label>
+            <input type="date" id="orderDeadline">
+        </div>
+        
+        <button type="submit" class="btn-submit">
+            <i class="fas fa-paper-plane"></i> Submit Custom Order
+        </button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('customOrderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const title = document.getElementById('orderTitle').value.trim();
+        const description = document.getElementById('orderDescription').value.trim();
+        const budget = document.getElementById('orderBudget').value;
+        const quantity = document.getElementById('orderQuantity').value;
+        const deadline = document.getElementById('orderDeadline').value;
+        
+        if (!title || !description) {
+            alert('Please fill in title and description.');
+            return;
+        }
+        
+        const btn = this.querySelector('.btn-submit');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        
+        try {
+            const response = await fetch('/api/custom-order/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description, budget, quantity, deadline, images: [] })
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert('✅ Custom order submitted! Admin will review it shortly.');
+                window.location.href = '/my-custom-orders';
+            } else {
+                alert('❌ ' + data.message);
+            }
+        } catch (err) {
+            alert('❌ Failed to submit order. Please try again.');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Custom Order';
+    });
+</script>
+
+<%- include('partials/footer') %>

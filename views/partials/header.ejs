@@ -391,6 +391,7 @@
             </a></li>
 
             <li><a href="/custom-orders"><i class="fas fa-edit"></i> Make a Custom Order</a></li>
+            
 
             <label for="Categories"></label> 
             <select name="Categories" id="Categories">
@@ -408,6 +409,37 @@
                 </optgroup>
             </select>
 
+            <!-- Customer Links -->
+<% if (typeof user !== 'undefined' && user) { %>
+    <li class="nav-item">
+        <a class="nav-link" href="/custom-order">
+            <i class="fas fa-pencil-alt"></i> Custom Order
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/my-custom-orders">
+            <i class="fas fa-list-ul"></i> My Custom Orders
+        </a>
+    </li>
+<% } %>
+
+<!-- Admin Links -->
+<% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
+    <li class="nav-item">
+        <a class="nav-link" href="/admin/custom-orders">
+            <i class="fas fa-clipboard-list"></i> Custom Orders
+        </a>
+    </li>
+<% } %>
+
+<!-- Seller Links -->
+<% if (typeof user !== 'undefined' && user && (user.role === 'seller' || user.role === 'authorized_cashier' || user.isSuperAdmin === true)) { %>
+    <li class="nav-item">
+        <a class="nav-link" href="/seller/custom-orders">
+            <i class="fas fa-gavel"></i> Bid on Orders
+        </a>
+    </li>
+<% } %>
           
             <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.role === 'authorized_cashier' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
                 <li>
@@ -510,6 +542,7 @@
     </nav>
 
 
+
     <% if (typeof user === 'undefined' || !user) { %>
         <div class="guest-cart-banner">
             <i class="fas fa-shopping-cart"></i>
@@ -522,6 +555,7 @@
     <div id="notificationContainer"></div>
 
 
+    
     <script>
         $(document).ready(function() {
 

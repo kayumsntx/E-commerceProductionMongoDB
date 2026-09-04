@@ -1122,6 +1122,297 @@ app.get("/terminal", requireCashierOrAdmin, async (req, res) => {
   }
 });
 
+// ==========================================
+// CUSTOM ORDER SCHEMA
+// ==========================================
+const customOrderSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    customerId: { type: String, required: true },
+    customerName: { type: String, required: true },
+    customerEmail: { type: String, required: true },
+    customerPhone: { type: String, default: '' },
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    images: [{ type: String, default: [] }],
+    budget: { type: Number, default: 0 },
+    quantity: { type: Number, default: 1 },
+    deadline: { type: Date, default: null },
+    status: { 
+        type: String, 
+        enum: ['pending', 'approved', 'rejected', 'assigned', 'completed'],
+        default: 'pending' 
+    },
+    adminNotes: { type: String, default: '' },
+    bids: [{
+        sellerId: { type: String, required: true },
+        sellerName: { type: String, required: true },
+        amount: { type: Number, required: true },
+        deliveryTime: { type: String, default: '' },
+        note: { type: String, default: '' },
+        status: { 
+            type: String, 
+            enum: ['pending', 'accepted', 'rejected'],
+            default: 'pending' 
+        },
+        createdAt: { type: Date, default: Date.now }
+    }],
+    selectedBidId: { type: String, default: null },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+const CustomOrder = mongoose.model("CustomOrder", customOrderSchema);
+
+
+// ==========================================
+// CUSTOM ORDER - CREATE PAGE (Customer)
+// ==========================================
+app.get("/custom-orders", requireAuth, (req, res) => {
+    res.render("custom-order", {
+        user: req.session.user,
+        isGuest: false
+    });
+});
+// ==========================================
+// CUSTOM ORDER ROUTES
+// ==========================================
+
+// ---------- Middleware: Seller or Admin ----------
+const requireSellerOrAdmin = (req, res, next) => {
+    if (req.session && req.session.user) {
+        const role = req.session.user.role;
+        if (role === 'seller' || role === 'admin' || role === 'superadmin' || req.session.user.isSuperAdmin) {
+            return next();
+        }
+    }
+    res.status(403).send("Access Denied: Seller or Admin permissions required.");
+};
+
+// ---------- CREATE CUSTOM ORDER (Customer) ----------
+app.post("/api/custom-order/create", requireAuth, async (req, res) => {
+    const { title, description, budget, quantity, deadline, images } = req.body;
+    
+    try {
+        const user = req.session.user;
+        const order = new CustomOrder({
+            id: "CO-" + Date.now(),
+            customerId: user.id,
+            customerName: user.profile?.name || user.username,
+            customerEmail: user.profile?.email || user.username,
+            customerPhone: user.profile?.phone || '',
+            title: title.trim(),
+            description: description.trim(),
+            budget: parseFloat(budget) || 0,
+            quantity: parseInt(quantity) || 1,
+            deadline: deadline ? new Date(deadline) : null,
+            images: images || [],
+            status: 'pending'
+        });
+        
+        await order.save();
+        res.json({ success: true, message: "Custom order created successfully!", order });
+    } catch (err) {
+        console.error("Custom order creation error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------- GET ALL CUSTOM ORDERS (Admin/Seller) ----------
+app.get("/api/custom-orders", requireAuth, async (req, res) => {
+    try {
+        const user = req.session.user;
+        let filter = {};
+        
+        // যদি সেলার হয়, শুধু approved অর্ডার দেখাবে
+        if (user.role === 'seller' || user.role === 'authorized_cashier') {
+            filter.status = 'approved';
+        }
+        // অ্যাডমিন সব দেখতে পাবে
+        // কাস্টমার শুধু নিজের অর্ডার দেখতে পাবে (আমরা আলাদা রাউট দেব)
+        
+        const orders = await CustomOrder.find(filter).sort({ createdAt: -1 });
+        res.json({ success: true, orders });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------- GET CUSTOMER'S OWN ORDERS ----------
+app.get("/api/my-custom-orders", requireAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const orders = await CustomOrder.find({ customerId: userId }).sort({ createdAt: -1 });
+        res.json({ success: true, orders });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------- GET SINGLE CUSTOM ORDER ----------
+app.get("/api/custom-order/:id", requireAuth, async (req, res) => {
+    try {
+        const order = await CustomOrder.findOne({ id: req.params.id });
+        if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+        
+        // Check permission: customer can view own, admin/seller can view approved
+        const user = req.session.user;
+        if (order.customerId !== user.id && user.role !== 'admin' && user.role !== 'superadmin' && user.role !== 'seller') {
+            return res.status(403).json({ success: false, message: "Access denied" });
+        }
+        res.json({ success: true, order });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------- ADMIN: APPROVE/REJECT CUSTOM ORDER ----------
+app.put("/api/admin/custom-order/:id", requireAdmin, async (req, res) => {
+    const { status, adminNotes } = req.body;
+    
+    try {
+        const order = await CustomOrder.findOne({ id: req.params.id });
+        if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+        
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ success: false, message: "Invalid status" });
+        }
+        
+        order.status = status;
+        if (adminNotes) order.adminNotes = adminNotes;
+        order.updatedAt = new Date();
+        await order.save();
+        
+        res.json({ success: true, message: `Order ${status} successfully`, order });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------- SELLER: PLACE BID ----------
+app.post("/api/custom-order/:id/bid", requireSellerOrAdmin, async (req, res) => {
+    const { amount, deliveryTime, note } = req.body;
+    const user = req.session.user;
+    
+    try {
+        const order = await CustomOrder.findOne({ id: req.params.id });
+        if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+        
+        if (order.status !== 'approved') {
+            return res.status(400).json({ success: false, message: "Order is not open for bidding" });
+        }
+        
+        // Check if seller already bid
+        const existingBid = order.bids.find(b => b.sellerId === user.id);
+        if (existingBid) {
+            return res.status(400).json({ success: false, message: "You have already placed a bid on this order" });
+        }
+        
+        const bid = {
+            sellerId: user.id,
+            sellerName: user.profile?.name || user.username,
+            amount: parseFloat(amount),
+            deliveryTime: deliveryTime || '',
+            note: note || '',
+            status: 'pending'
+        };
+        
+        order.bids.push(bid);
+        order.updatedAt = new Date();
+        await order.save();
+        
+        res.json({ success: true, message: "Bid placed successfully", bid });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------- ADMIN: ACCEPT/REJECT BID ----------
+app.put("/api/admin/custom-order/:orderId/bid/:bidId", requireAdmin, async (req, res) => {
+    const { action } = req.body; // 'accept' or 'reject'
+    
+    try {
+        const order = await CustomOrder.findOne({ id: req.params.orderId });
+        if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+        
+        const bidIndex = order.bids.findIndex(b => b._id.toString() === req.params.bidId);
+        if (bidIndex === -1) return res.status(404).json({ success: false, message: "Bid not found" });
+        
+        if (action === 'accept') {
+            // Reject all other bids
+            order.bids.forEach((b, idx) => {
+                if (idx !== bidIndex) b.status = 'rejected';
+            });
+            order.bids[bidIndex].status = 'accepted';
+            order.status = 'assigned';
+            order.selectedBidId = order.bids[bidIndex]._id;
+        } else if (action === 'reject') {
+            order.bids[bidIndex].status = 'rejected';
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid action" });
+        }
+        
+        order.updatedAt = new Date();
+        await order.save();
+        
+        res.json({ success: true, message: `Bid ${action}ed successfully`, order });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------- VIEW CUSTOM ORDER PAGE ----------
+app.get("/custom-order/:id", requireAuth, async (req, res) => {
+    try {
+        const order = await CustomOrder.findOne({ id: req.params.id });
+        if (!order) return res.status(404).send("Order not found");
+        
+        // Permission check
+        const user = req.session.user;
+        const isOwner = order.customerId === user.id;
+        const isAdmin = user.role === 'admin' || user.role === 'superadmin' || user.isSuperAdmin;
+        const isSeller = user.role === 'seller' || user.role === 'authorized_cashier';
+        
+        if (!isOwner && !isAdmin && !isSeller) {
+            return res.status(403).send("Access denied");
+        }
+        
+        res.render("custom-order-detail", {
+            order,
+            user,
+            isOwner,
+            isAdmin,
+            isSeller,
+            isGuest: false
+        });
+    } catch (err) {
+        res.status(500).send("Server error");
+    }
+});
+
+// ---------- CUSTOM ORDER LIST (for customers) ----------
+app.get("/my-custom-orders", requireAuth, (req, res) => {
+    res.render("my-custom-orders", {
+        user: req.session.user,
+        isGuest: false
+    });
+});
+
+// ---------- ADMIN CUSTOM ORDER MANAGEMENT ----------
+app.get("/admin/custom-orders", requireAdmin, (req, res) => {
+    res.render("admin-custom-orders", {
+        user: req.session.user,
+        isGuest: false
+    });
+});
+
+// ---------- SELLER DASHBOARD (Bid on orders) ----------
+app.get("/seller/custom-orders", requireSellerOrAdmin, (req, res) => {
+    res.render("seller-custom-orders", {
+        user: req.session.user,
+        isGuest: false
+    });
+});
+
+
 // ---------- CART APIs ----------
 app.post("/api/cart/add", async (req, res) => {
   const { productId, quantity = 1, size = '', color = '' } = req.body;
@@ -2069,6 +2360,8 @@ app.get("/sales", requireAdmin, async (req, res) => {
     res.status(500).send("Could not retrieve sales receipts logs ledger.");
   }
 });
+
+
 
 // ---------- ADMIN ORDERS ----------
 app.get("/admin/orders", requireAdmin, async (req, res) => {

@@ -1,0 +1,133 @@
+<%- include('partials/header') %>
+
+<style>
+    .seller-orders-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 20px;
+    }
+    .seller-orders-container h2 {
+        border-bottom: 2px solid #f39c12;
+        padding-bottom: 12px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .order-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+    }
+    .order-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .order-card .title { font-size: 1.1rem; font-weight: 600; color: #2d3748; }
+    .order-card .meta { font-size: 0.85rem; color: #718096; margin: 6px 0; }
+    .bid-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+    .bid-form input, .bid-form textarea { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 120px; }
+    .bid-form button { padding: 8px 20px; background: #f39c12; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .bid-form button:hover { background: #e67e22; }
+    .already-bid { color: #27ae60; font-weight: 600; margin-top: 8px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #a0aec0; }
+    .empty-state i { font-size: 3rem; display: block; margin-bottom: 12px; }
+</style>
+
+<div class="seller-orders-container">
+    <h2><i class="fas fa-gavel"></i> Available Custom Orders for Bidding</h2>
+    
+    <div id="ordersList">
+        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>
+    </div>
+</div>
+
+<script>
+    async function loadOrders() {
+        try {
+            const res = await fetch('/api/custom-orders');
+            const data = await res.json();
+            if (data.success) {
+                renderOrders(data.orders);
+            }
+        } catch (err) {
+            console.error(err);
+            document.getElementById('ordersList').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#e53e3e;"></i><p>Failed to load orders</p></div>`;
+        }
+    }
+
+    function renderOrders(orders) {
+        const container = document.getElementById('ordersList');
+        const approved = orders.filter(o => o.status === 'approved');
+        if (approved.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>No orders available for bidding right now.</p></div>`;
+            return;
+        }
+        
+        let html = '';
+        approved.forEach(order => {
+            const userBid = order.bids.find(b => b.sellerId === '<%= user.id %>');
+            html += `
+                <div class="order-card">
+                    <div class="title">${order.title}</div>
+                    <div class="meta">
+                        <i class="fas fa-user"></i> ${order.customerName} 
+                        | <i class="fas fa-calendar"></i> ${new Date(order.createdAt).toLocaleDateString()}
+                        ${order.budget ? `| <i class="fas fa-money-bill"></i> Budget: BDT ${order.budget}` : ''}
+                        ${order.deadline ? `| <i class="fas fa-clock"></i> Deadline: ${new Date(order.deadline).toLocaleDateString()}` : ''}
+                    </div>
+                    <div class="meta"><strong>Description:</strong> ${order.description}</div>
+                    
+                    ${userBid ? `
+                        <div class="already-bid"><i class="fas fa-check-circle"></i> You have already placed a bid of BDT ${userBid.amount} (Status: ${userBid.status})</div>
+                    ` : `
+                        <form class="bid-form" onsubmit="placeBid(event, '${order.id}')">
+                            <input type="number" name="amount" placeholder="Your bid (BDT)" required step="0.01" min="1">
+                            <input type="text" name="delivery" placeholder="Delivery time (e.g. 3 days)">
+                            <textarea name="note" placeholder="Note (optional)" rows="1"></textarea>
+                            <button type="submit"><i class="fas fa-paper-plane"></i> Place Bid</button>
+                        </form>
+                    `}
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    async function placeBid(e, orderId) {
+        e.preventDefault();
+        const form = e.target;
+        const amount = form.querySelector('input[name="amount"]').value;
+        const delivery = form.querySelector('input[name="delivery"]').value;
+        const note = form.querySelector('textarea[name="note"]').value;
+        
+        if (!amount) { alert('Please enter a bid amount'); return; }
+        
+        const btn = form.querySelector('button');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        
+        try {
+            const res = await fetch(`/api/custom-order/${orderId}/bid`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount, deliveryTime: delivery, note })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('✅ Bid placed successfully!');
+                loadOrders();
+            } else {
+                alert('❌ ' + data.message);
+            }
+        } catch (err) {
+            alert('❌ Failed to place bid');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Place Bid';
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+
+<%- include('partials/footer') %>
