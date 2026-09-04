@@ -1,0 +1,490 @@
+<%- include('partials/header') %>
+
+<style>
+    .my-orders-page {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #f39c12;
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .page-header h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #1a202c;
+    }
+
+    .page-header h2 i {
+        color: #f39c12;
+    }
+
+    .page-header .order-count {
+        background: #edf2f7;
+        color: #4a5568;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .order-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        padding: 20px 24px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .order-card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        border-color: #f39c12;
+    }
+
+    .order-card .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .order-card .order-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0;
+    }
+
+    .order-card .order-id {
+        font-size: 0.75rem;
+        color: #a0aec0;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+
+    .order-card .status-badge {
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+    }
+
+    .status-pending {
+        background: #fefcbf;
+        color: #975a16;
+    }
+
+    .status-approved {
+        background: #c6f6d5;
+        color: #276749;
+    }
+
+    .status-rejected {
+        background: #fed7d7;
+        color: #9b2c2c;
+    }
+
+    .status-assigned {
+        background: #bee3f8;
+        color: #2a69ac;
+    }
+
+    .status-completed {
+        background: #e9d8fd;
+        color: #6b46c1;
+    }
+
+    .order-card .order-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px 24px;
+        font-size: 0.85rem;
+        color: #718096;
+        margin: 8px 0 12px 0;
+    }
+
+    .order-card .order-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .order-card .order-meta i {
+        width: 16px;
+        color: #a0aec0;
+    }
+
+    .order-card .order-description {
+        font-size: 0.92rem;
+        color: #4a5568;
+        line-height: 1.6;
+        margin: 8px 0 12px 0;
+        padding: 12px 16px;
+        background: #f7fafc;
+        border-radius: 8px;
+        border-left: 3px solid #f39c12;
+    }
+
+    /* ✅ ছবি গ্যালারি */
+    .order-images {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 12px 0;
+    }
+
+    .order-images .img-thumb {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .order-images .img-thumb:hover {
+        border-color: #f39c12;
+        transform: scale(1.05);
+    }
+
+    /* ✅ বিড তথ্য */
+    .bid-info {
+        background: #f7fafc;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-top: 12px;
+        border: 1px solid #e2e8f0;
+        font-size: 0.85rem;
+    }
+
+    .bid-info .bid-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .bid-info .bid-header strong {
+        color: #2d3748;
+    }
+
+    .bid-info .bid-amount {
+        font-weight: 700;
+        color: #2b6cb0;
+        font-size: 1rem;
+    }
+
+    .bid-info .bid-status {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 2px 12px;
+        border-radius: 12px;
+    }
+
+    .bid-status-accepted {
+        background: #c6f6d5;
+        color: #276749;
+    }
+
+    .bid-status-pending {
+        background: #fefcbf;
+        color: #975a16;
+    }
+
+    .bid-status-rejected {
+        background: #fed7d7;
+        color: #9b2c2c;
+    }
+
+    /* ✅ অ্যাডমিন নোট */
+    .admin-note {
+        background: #ebf8ff;
+        border-left: 3px solid #3182ce;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        color: #2a69ac;
+        margin-top: 10px;
+    }
+
+    .admin-note strong {
+        color: #1a365d;
+    }
+
+    /* ✅ Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: #a0aec0;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        display: block;
+        margin-bottom: 16px;
+        color: #e2e8f0;
+    }
+
+    .empty-state h3 {
+        color: #4a5568;
+        margin-bottom: 8px;
+    }
+
+    .empty-state .btn-shop {
+        display: inline-block;
+        margin-top: 16px;
+        padding: 10px 28px;
+        background: linear-gradient(45deg, #f39c12, #e67e22);
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .empty-state .btn-shop:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(243, 156, 18, 0.4);
+    }
+
+    /* ✅ Responsive */
+    @media (max-width: 768px) {
+        .my-orders-page {
+            padding: 12px;
+        }
+
+        .order-card {
+            padding: 16px 18px;
+        }
+
+        .order-card .order-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .order-card .order-meta {
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .order-images .img-thumb {
+            width: 55px;
+            height: 55px;
+        }
+
+        .bid-info .bid-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .page-header h2 {
+            font-size: 1.2rem;
+        }
+
+        .order-card .order-title {
+            font-size: 0.95rem;
+        }
+
+        .order-card .order-description {
+            font-size: 0.82rem;
+            padding: 10px 12px;
+        }
+
+        .order-images .img-thumb {
+            width: 45px;
+            height: 45px;
+        }
+    }
+</style>
+
+<div class="my-orders-page">
+    <!-- ===== HEADER ===== -->
+    <div class="page-header">
+        <h2>
+            <i class="fas fa-list-ul"></i> My Custom Orders
+        </h2>
+        <span class="order-count">
+            <i class="fas fa-file-alt"></i> <%= orders ? orders.length : 0 %> order(s)
+        </span>
+    </div>
+
+    <!-- ===== ORDERS LIST ===== -->
+    <% if (orders && orders.length > 0) { %>
+        <% orders.forEach(order => { %>
+            <div class="order-card">
+                <!-- Header -->
+                <div class="order-header">
+                    <div>
+                        <span class="order-title">
+                            <%= order.title %>
+                            <span class="order-id">#<%= order.id %></span>
+                        </span>
+                    </div>
+                    <span class="status-badge status-<%= order.status %>">
+                        <i class="fas <%= order.status === 'pending' ? 'fa-clock' : (order.status === 'approved' ? 'fa-check-circle' : (order.status === 'rejected' ? 'fa-times-circle' : (order.status === 'assigned' ? 'fa-user-check' : 'fa-check-double'))) %>"></i>
+                        <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
+                    </span>
+                </div>
+
+                <!-- Meta Info -->
+                <div class="order-meta">
+                    <span><i class="fas fa-calendar-alt"></i> <%= new Date(order.createdAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) %></span>
+                    <% if (order.budget && order.budget > 0) { %>
+                        <span><i class="fas fa-money-bill-wave"></i> Budget: BDT. <%= order.budget.toFixed(2) %></span>
+                    <% } %>
+                    <% if (order.quantity && order.quantity > 1) { %>
+                        <span><i class="fas fa-cubes"></i> Qty: <%= order.quantity %></span>
+                    <% } %>
+                    <% if (order.deadline) { %>
+                        <span><i class="fas fa-hourglass-end"></i> Deadline: <%= new Date(order.deadline).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) %></span>
+                    <% } %>
+                </div>
+
+                <!-- Description -->
+                <div class="order-description">
+                    <%= order.description %>
+                </div>
+
+                <!-- Images -->
+                <% if (order.images && order.images.length > 0) { %>
+                    <div class="order-images">
+                        <% order.images.forEach(img => { %>
+                            <img src="<%= img %>" alt="Reference Image" class="img-thumb" onclick="window.open('<%= img %>', '_blank')">
+                        <% }) %>
+                    </div>
+                <% } %>
+
+                <!-- Admin Notes (if any) -->
+                <% if (order.adminNotes) { %>
+                    <div class="admin-note">
+                        <strong><i class="fas fa-user-shield"></i> Admin Note:</strong> <%= order.adminNotes %>
+                    </div>
+                <% } %>
+
+                <!-- ✅ বিড ইনফো (যদি অর্ডার assigned বা completed হয়) -->
+                <% if (order.status === 'assigned' || order.status === 'completed') { %>
+                    <% if (order.selectedBidId) { %>
+                        <% const selectedBid = order.bids.find(b => b._id.toString() === order.selectedBidId.toString()); %>
+                        <% if (selectedBid) { %>
+                            <div class="bid-info">
+                                <div class="bid-header">
+                                    <div>
+                                        <strong><i class="fas fa-handshake"></i> Assigned to:</strong>
+                                        <%= selectedBid.sellerName %>
+                                        <span style="font-size:0.75rem; color:#718096; margin-left:8px;">
+                                            (Bid: <span class="bid-amount">BDT. <%= selectedBid.amount.toFixed(2) %></span>)
+                                        </span>
+                                    </div>
+                                    <span class="bid-status bid-status-accepted">
+                                        <i class="fas fa-check-circle"></i> Accepted
+                                    </span>
+                                </div>
+                                <% if (selectedBid.deliveryTime) { %>
+                                    <div style="margin-top:4px; font-size:0.8rem; color:#718096;">
+                                        <i class="fas fa-truck"></i> Delivery: <%= selectedBid.deliveryTime %>
+                                    </div>
+                                <% } %>
+                                <% if (selectedBid.note) { %>
+                                    <div style="margin-top:2px; font-size:0.8rem; color:#718096;">
+                                        <i class="fas fa-comment"></i> Note: <%= selectedBid.note %>
+                                    </div>
+                                <% } %>
+                            </div>
+                        <% } %>
+                    <% } %>
+                <% } %>
+
+                <!-- ✅ পেন্ডিং অর্ডারের জন্য বিডের সংখ্যা -->
+                <% if (order.status === 'pending') { %>
+                    <div style="margin-top:10px; font-size:0.8rem; color:#a0aec0;">
+                        <i class="fas fa-info-circle"></i> 
+                        This order is waiting for admin approval.
+                        <span style="display:block; margin-top:2px; font-size:0.75rem;">
+                            <i class="fas fa-clock"></i> Submitted on <%= new Date(order.createdAt).toLocaleString() %>
+                        </span>
+                    </div>
+                <% } %>
+
+                <!-- ✅ রিজেক্টেড অর্ডার -->
+                <% if (order.status === 'rejected') { %>
+                    <div style="margin-top:10px; font-size:0.8rem; color:#e53e3e;">
+                        <i class="fas fa-exclamation-circle"></i> 
+                        This order has been rejected by the admin.
+                        <% if (order.adminNotes) { %>
+                            <br><span style="color:#4a5568;"><strong>Reason:</strong> <%= order.adminNotes %></span>
+                        <% } %>
+                    </div>
+                <% } %>
+
+                <!-- ✅ এপ্রুভড অর্ডার - বিডের সংখ্যা দেখান -->
+                <% if (order.status === 'approved') { %>
+                    <div style="margin-top:10px; font-size:0.8rem; color:#2b6cb0;">
+                        <i class="fas fa-check-circle"></i> 
+                        This order is approved and open for bidding.
+                        <span style="display:block; margin-top:2px; font-size:0.75rem; color:#718096;">
+                            <i class="fas fa-users"></i> <%= order.bids ? order.bids.length : 0 %> bid(s) received
+                        </span>
+                    </div>
+                <% } %>
+
+                <!-- ✅ কমপ্লিটেড অর্ডার -->
+                <% if (order.status === 'completed') { %>
+                    <div style="margin-top:10px; font-size:0.8rem; color:#27ae60;">
+                        <i class="fas fa-check-double"></i> 
+                        This order has been completed successfully!
+                        <span style="display:block; margin-top:2px; font-size:0.75rem; color:#718096;">
+                            <i class="fas fa-calendar-check"></i> Completed on <%= new Date(order.updatedAt).toLocaleDateString() %>
+                        </span>
+                    </div>
+                <% } %>
+
+            </div>
+        <% }) %>
+    <% } else { %>
+        <!-- ===== EMPTY STATE ===== -->
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3>No Custom Orders Yet</h3>
+            <p>You haven't created any custom orders yet.</p>
+            <a href="/custom-order" class="btn-shop">
+                <i class="fas fa-pencil-alt"></i> Create Your First Custom Order
+            </a>
+        </div>
+    <% } %>
+</div>
+
+<script>
+    console.log('✅ My Custom Orders Page Loaded');
+
+    // ============================================
+    // ইমেজ ক্লিক করে বড় করে দেখানো (optional)
+    // ============================================
+    document.querySelectorAll('.img-thumb').forEach(img => {
+        img.addEventListener('click', function() {
+            window.open(this.src, '_blank');
+        });
+    });
+</script>
+
+<%- include('partials/footer') %>

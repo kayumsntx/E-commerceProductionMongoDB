@@ -65,12 +65,44 @@
         color: #a0aec0;
         margin-top: 4px;
     }
+
+    /* ✅ ইমেজ প্রিভিউ স্টাইল */
+    .image-preview-container {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+    .image-preview-container .preview-thumb {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+    .image-preview-container .preview-thumb:hover {
+        border-color: #f39c12;
+        transform: scale(1.05);
+    }
+    .image-preview-container .preview-count {
+        font-size: 0.85rem;
+        color: #2b6cb0;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #ebf8ff;
+        padding: 4px 14px;
+        border-radius: 20px;
+    }
 </style>
 
 <div class="custom-order-page">
     <h2><i class="fas fa-pencil-alt"></i> Make a Custom Order</h2>
     
-    <form id="customOrderForm">
+    <!-- ✅ ফর্মে enctype="multipart/form-data" যোগ করতে হবে -->
+    <form id="customOrderForm" enctype="multipart/form-data">
         <div class="form-group">
             <label>Order Title *</label>
             <input type="text" id="orderTitle" placeholder="e.g. Customized Gift Box" required>
@@ -96,6 +128,14 @@
             <input type="date" id="orderDeadline">
         </div>
         
+        <!-- ✅ ছবি আপলোড ফিল্ড -->
+        <div class="form-group">
+            <label><i class="fas fa-images"></i> Reference Images (Max 5)</label>
+            <input type="file" id="orderImages" name="orderImages" accept="image/*" multiple>
+            <div class="help-text">You can upload up to 5 images for reference.</div>
+            <div class="image-preview-container" id="imagePreview"></div>
+        </div>
+        
         <button type="submit" class="btn-submit">
             <i class="fas fa-paper-plane"></i> Submit Custom Order
         </button>
@@ -103,6 +143,38 @@
 </div>
 
 <script>
+    // ============================================
+    // ✅ ইমেজ প্রিভিউ
+    // ============================================
+    document.getElementById('orderImages').addEventListener('change', function(e) {
+        const preview = document.getElementById('imagePreview');
+        preview.innerHTML = '';
+        const files = this.files;
+        
+        if (files.length > 0) {
+            // কাউন্ট দেখান
+            const countSpan = document.createElement('span');
+            countSpan.className = 'preview-count';
+            countSpan.innerHTML = `<i class="fas fa-check-circle"></i> ${files.length} image(s) selected`;
+            preview.appendChild(countSpan);
+        }
+        
+        for (let i = 0; i < Math.min(files.length, 5); i++) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.className = 'preview-thumb';
+                img.title = `Image ${i+1}`;
+                preview.appendChild(img);
+            }
+            reader.readAsDataURL(files[i]);
+        }
+    });
+
+    // ============================================
+    // ✅ ফর্ম সাবমিট (FormData দিয়ে)
+    // ============================================
     document.getElementById('customOrderForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -111,10 +183,24 @@
         const budget = document.getElementById('orderBudget').value;
         const quantity = document.getElementById('orderQuantity').value;
         const deadline = document.getElementById('orderDeadline').value;
+        const images = document.getElementById('orderImages').files;
         
         if (!title || !description) {
             alert('Please fill in title and description.');
             return;
+        }
+        
+        // ✅ FormData তৈরি করুন
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('budget', budget || '0');
+        formData.append('quantity', quantity || '1');
+        formData.append('deadline', deadline || '');
+        
+        // ছবি যোগ করুন
+        for (let i = 0; i < Math.min(images.length, 5); i++) {
+            formData.append('orderImages', images[i]);
         }
         
         const btn = this.querySelector('.btn-submit');
@@ -124,8 +210,8 @@
         try {
             const response = await fetch('/api/custom-order/create', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, description, budget, quantity, deadline, images: [] })
+                // ✅ Content-Type header সেট করবেন না (FormData নিজেই সেট করে)
+                body: formData
             });
             const data = await response.json();
             if (data.success) {

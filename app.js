@@ -1187,24 +1187,36 @@ const requireSellerOrAdmin = (req, res, next) => {
     res.status(403).send("Access Denied: Seller or Admin permissions required.");
 };
 
-// ---------- CREATE CUSTOM ORDER (Customer) ----------
-app.post("/api/custom-order/create", requireAuth, async (req, res) => {
-    const { title, description, budget, quantity, deadline, images } = req.body;
+// ==========================================
+// CUSTOM ORDER - CREATE (with Image Upload)
+// ==========================================
+const uploadOrderImages = multer({
+    storage: productStorage, // Cloudinary storage (আপনার আগের productStorage ব্যবহার করুন)
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB per file
+}).array('orderImages', 5); // Max 5 images
+
+app.post("/api/custom-order/create", requireAuth, uploadOrderImages, async (req, res) => {
+    const { title, description, budget, quantity, deadline } = req.body;
     
     try {
-        const user = req.session.user;
+        // ছবির URL সংগ্রহ করুন
+        let imageUrls = [];
+        if (req.files && req.files.length > 0) {
+            imageUrls = req.files.map(file => file.path); // Cloudinary URL
+        }
+        
         const order = new CustomOrder({
             id: "CO-" + Date.now(),
-            customerId: user.id,
-            customerName: user.profile?.name || user.username,
-            customerEmail: user.profile?.email || user.username,
-            customerPhone: user.profile?.phone || '',
+            customerId: req.session.user.id,
+            customerName: req.session.user.profile?.name || req.session.user.username,
+            customerEmail: req.session.user.profile?.email || req.session.user.username,
+            customerPhone: req.session.user.profile?.phone || '',
             title: title.trim(),
             description: description.trim(),
             budget: parseFloat(budget) || 0,
             quantity: parseInt(quantity) || 1,
             deadline: deadline ? new Date(deadline) : null,
-            images: images || [],
+            images: imageUrls, // ✅ ছবি সেভ
             status: 'pending'
         });
         
