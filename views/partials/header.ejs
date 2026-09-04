@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GIFTYPACK.COM</title>
 
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
     <style>
-        /* ============================================
-           RESET & BASE
-           ============================================ */
+
         * {
             margin: 0;
             padding: 0;
@@ -20,275 +21,219 @@
         }
 
         body {
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            margin: 0;
             background: #f0f2f5;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* ============================================
-           MAIN NAVBAR – প্রফেশনাল
-           ============================================ */
+        /* =========================================================
+           NAVBAR SHELL
+           Two stacked rows inside one sticky bar:
+             row 1 = brand, search, cart, account/login
+             row 2 = site navigation + category filter
+           ========================================================= */
         .main-navbar {
-            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 32px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            background: linear-gradient(135deg, #1f2733 0%, #2d3748 100%);
+            color: white;
             position: sticky;
             top: 0;
             z-index: 1000;
-            gap: 16px;
-            flex-wrap: nowrap;
-            min-height: 64px;
-            border-bottom: 2px solid rgba(243, 156, 18, 0.15);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            width: 100%;
         }
 
-        /* ===== LOGO ===== */
+        .navbar-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 30px;
+        }
+
+        .navbar-row-top {
+            padding-bottom: 8px;
+        }
+
+        .navbar-row-bottom {
+            padding-top: 8px;
+            padding-bottom: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            flex-wrap: wrap;
+            row-gap: 6px;
+        }
+
+        /* Logo */
         .nav-brand-container {
             display: flex;
             align-items: center;
             text-decoration: none;
-            gap: 10px;
+            gap: 12px;
             flex-shrink: 0;
         }
 
         .header-logo {
-            height: 40px;
+            height: 45px;
             width: auto;
             object-fit: contain;
             display: block;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
         }
 
         .nav-brand {
-            font-size: 1.35rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #f39c12, #e67e22);
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #f39c12, #e67e22);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
             white-space: nowrap;
         }
 
-        /* ===== SEARCH BOX ===== */
+        /* Search box */
         .header-search-box {
-            flex: 0 1 260px;
-            min-width: 140px;
+            flex: 1 1 320px;
+            max-width: 420px;
+            display: flex;
             position: relative;
         }
 
         .header-search-box input {
             width: 100%;
-            padding: 7px 14px 7px 36px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1.5px solid transparent;
+            padding: 9px 14px 9px 38px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
             border-radius: 50px;
             color: #fff;
             font-size: 0.85rem;
             outline: none;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
 
         .header-search-box input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.6);
             font-size: 0.8rem;
         }
 
         .header-search-box input:focus {
-            background: rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.15);
             border-color: #f39c12;
-            box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.15);
+            box-shadow: 0 0 20px rgba(243, 156, 18, 0.2);
         }
 
         .search-icon-placeholder {
             position: absolute;
-            left: 12px;
+            left: 13px;
             top: 50%;
             transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
             pointer-events: none;
+            font-size: 0.8rem;
         }
 
-        /* ===== NAV LINKS ===== */
-        .nav-links {
+        /* Right-hand cluster on row 1 */
+        .navbar-actions {
             display: flex;
             align-items: center;
-            gap: 2px;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .nav-links::-webkit-scrollbar {
-            height: 0;
-        }
-
-        .nav-links li {
-            display: flex;
-            align-items: center;
+            gap: 10px;
+            margin-left: auto;
             flex-shrink: 0;
         }
 
-        .nav-links a,
-        .nav-links .dropdown-toggle {
+        /* Shared pill link style used across the bottom row */
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
             color: rgba(255, 255, 255, 0.75);
             text-decoration: none;
             font-weight: 500;
-            padding: 6px 14px;
+            transition: all 0.25s ease;
+            padding: 7px 14px;
             border-radius: 50px;
             font-size: 0.82rem;
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.25s ease;
             white-space: nowrap;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-family: inherit;
         }
 
         .nav-links a:hover,
-        .nav-links .dropdown-toggle:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.08);
+        .nav-links a:focus-visible {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        .nav-links a i,
-        .nav-links .dropdown-toggle i {
+        .nav-links a i {
             font-size: 0.85rem;
-            opacity: 0.7;
         }
 
-        /* ===== CUSTOM DROPDOWN (Categories) ===== */
-        .custom-dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
-        .custom-dropdown .dropdown-toggle {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 6px 16px 6px 14px;
+        /* Category filter, styled to sit inline with the nav pills */
+        .nav-category-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 50px;
+            padding: 7px 32px 7px 14px;
             font-size: 0.82rem;
-            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            outline: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23f39c12'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
             transition: all 0.25s ease;
         }
 
-        .custom-dropdown .dropdown-toggle:hover {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(243, 156, 18, 0.4);
-            color: #fff;
+        .nav-category-select:hover,
+        .nav-category-select:focus {
+            background-color: rgba(255, 255, 255, 0.14);
+            border-color: rgba(243, 156, 18, 0.5);
         }
 
-        .custom-dropdown .dropdown-toggle i {
-            font-size: 0.8rem;
-            opacity: 0.6;
+        .nav-category-select option {
+            color: #1f2733;
         }
 
-        .custom-dropdown .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 0;
-            min-width: 220px;
-            background: #1a202c;
-            border-radius: 12px;
-            padding: 6px 0;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            z-index: 1100;
-        }
-
-        .custom-dropdown .dropdown-menu.show {
-            display: block;
-            animation: fadeDown 0.2s ease;
-        }
-
-        @keyframes fadeDown {
-            from {
-                opacity: 0;
-                transform: translateY(-6px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .custom-dropdown .dropdown-menu a,
-        .custom-dropdown .dropdown-menu .dropdown-item {
-            display: block;
-            padding: 8px 20px;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: background 0.15s ease;
-            border: none;
-            background: transparent;
-            width: 100%;
-            text-align: left;
-            cursor: pointer;
-        }
-
-        .custom-dropdown .dropdown-menu a:hover,
-        .custom-dropdown .dropdown-menu .dropdown-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            color: #fff;
-        }
-
-        .custom-dropdown .dropdown-menu .divider {
-            height: 1px;
-            background: rgba(255, 255, 255, 0.06);
-            margin: 4px 12px;
-        }
-
-        .custom-dropdown .dropdown-menu .optgroup-label {
-            padding: 6px 20px 2px;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: rgba(255, 255, 255, 0.3);
-            font-weight: 600;
-        }
-
-        /* ===== CART LINK ===== */
+        /* Cart pill */
         .nav-cart-link {
-            background: rgba(243, 156, 18, 0.15) !important;
-            border: 1px solid rgba(243, 156, 18, 0.25) !important;
-            padding: 6px 16px !important;
-            border-radius: 50px !important;
+            background: rgba(243, 156, 18, 0.15);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+            position: relative;
+            padding: 8px 16px !important;
+            border-radius: 50px;
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            transition: all 0.25s ease;
         }
 
         .nav-cart-link:hover {
-            background: rgba(243, 156, 18, 0.25) !important;
+            background: rgba(243, 156, 18, 0.28);
         }
 
         .nav-cart-link .cart-badge {
             background: #e74c3c;
-            color: #fff;
+            color: white;
             border-radius: 50%;
-            padding: 1px 7px;
-            font-size: 0.6rem;
-            font-weight: 700;
+            padding: 1px 6px;
+            font-size: 0.62rem;
+            font-weight: bold;
             min-width: 18px;
             text-align: center;
             display: inline-block;
-            margin-left: 4px;
             animation: pulse-badge 2s infinite;
         }
 
@@ -298,66 +243,146 @@
         }
 
         @keyframes pulse-badge {
-            0%,
-            100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.1);
-            }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
 
-        /* ===== BUTTONS ===== */
+        /* Super Admin Badge */
+        .super-admin-badge {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 0.55rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        /* Login button */
         .btn-login {
-            background: linear-gradient(135deg, #f39c12, #e67e22) !important;
-            color: #fff !important;
-            font-weight: 600 !important;
-            padding: 6px 18px !important;
-            border-radius: 50px !important;
-            border: none !important;
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white !important;
+            font-weight: 600;
+            padding: 8px 20px !important;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.35) !important;
-            background: linear-gradient(135deg, #f39c12, #d68910) !important;
+            box-shadow: 0 5px 20px rgba(243, 156, 18, 0.4);
         }
 
-        .btn-logout {
-            background: rgba(229, 62, 62, 0.9) !important;
-            color: #fff !important;
-            padding: 6px 16px !important;
-            border-radius: 50px !important;
-            border: none !important;
+        /* =========================================================
+           ACCOUNT MENU
+           Groups profile / customer / seller / admin / super-admin
+           links into a single dropdown instead of a long link list.
+           ========================================================= */
+        .user-menu {
+            position: relative;
         }
 
-        .btn-logout:hover {
-            background: #c0392b !important;
-        }
-
-        .user-name-display {
-            color: #f39c12 !important;
+        .user-menu-toggle {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f39c12;
             font-weight: 600;
-            padding: 6px 12px !important;
+            font-size: 0.82rem;
+            padding: 6px 14px;
+            border-radius: 50px;
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 0.8rem;
+            gap: 7px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
         }
 
-        .super-admin-badge {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: #fff;
-            padding: 1px 10px;
-            border-radius: 20px;
-            font-size: 0.55rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-left: 6px;
-            display: inline-block;
+        .user-menu-toggle:hover,
+        .user-menu-toggle.open {
+            background: rgba(255, 255, 255, 0.14);
         }
 
-        /* ===== GUEST CART BANNER ===== */
+        .user-menu-toggle .menu-caret {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.6);
+            transition: transform 0.2s ease;
+        }
+
+        .user-menu-toggle.open .menu-caret {
+            transform: rotate(180deg);
+        }
+
+        .user-menu-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 10px);
+            min-width: 240px;
+            background: #ffffff;
+            color: #2d3748;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            padding: 8px 0;
+            z-index: 1100;
+        }
+
+        .user-menu-dropdown.open {
+            display: block;
+        }
+
+        .user-menu-dropdown .menu-section-label {
+            padding: 10px 18px 4px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #a0aec0;
+            letter-spacing: 0.02em;
+        }
+
+        .user-menu-dropdown a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 18px;
+            color: #2d3748;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background 0.15s ease;
+        }
+
+        .user-menu-dropdown a i {
+            width: 16px;
+            text-align: center;
+            color: #f39c12;
+        }
+
+        .user-menu-dropdown a:hover {
+            background: #f7f8fa;
+        }
+
+        .user-menu-dropdown .menu-divider {
+            height: 1px;
+            background: #edf0f3;
+            margin: 6px 0;
+        }
+
+        .user-menu-dropdown .btn-logout-menu {
+            color: #e53e3e;
+        }
+
+        .user-menu-dropdown .btn-logout-menu i {
+            color: #e53e3e;
+        }
+
+        /* Guest cart banner */
         .guest-cart-banner {
             background: #ebf8ff;
             padding: 6px 20px;
@@ -377,7 +402,7 @@
             text-decoration: underline;
         }
 
-        /* ===== NOTIFICATION ===== */
+        /* Notifications */
         #notificationContainer {
             position: fixed;
             top: 80px;
@@ -394,132 +419,101 @@
             border-radius: 12px;
             color: #fff;
             font-weight: 500;
-            animation: slideIn 0.4s ease;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.5s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .notification-success {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
-        }
-        .notification-info {
-            background: linear-gradient(135deg, #2980b9, #3498db);
-        }
-        .notification-warning {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-        }
-        .notification-error {
-            background: linear-gradient(135deg, #c0392b, #e74c3c);
-        }
+        .notification-success { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .notification-info { background: linear-gradient(135deg, #2980b9, #3498db); }
+        .notification-warning { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .notification-error { background: linear-gradient(135deg, #c0392b, #e74c3c); }
 
         @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
-        /* ============================================
+        /* =========================================================
            RESPONSIVE
-           ============================================ */
-        @media (max-width: 1024px) {
-            .main-navbar {
-                padding: 8px 18px;
-                gap: 12px;
+           ========================================================= */
+        @media (max-width: 768px) {
+            .navbar-row {
+                padding: 10px 15px;
+                flex-wrap: wrap;
             }
-            .header-search-box {
-                flex: 0 1 180px;
-                min-width: 120px;
-            }
-            .nav-links a,
-            .nav-links .dropdown-toggle,
-            .custom-dropdown .dropdown-toggle {
-                font-size: 0.75rem;
-                padding: 5px 10px;
-            }
-        }
 
-        @media (max-width: 820px) {
-            .main-navbar {
-                flex-wrap: wrap;
-                padding: 8px 16px;
-                gap: 6px;
-            }
-            .nav-brand-container {
-                flex-shrink: 0;
-            }
-            .header-search-box {
-                flex: 1 1 100%;
-                order: 3;
-                min-width: unset;
-            }
-            .nav-links {
-                flex-wrap: wrap;
+            .navbar-row-top {
                 justify-content: center;
-                gap: 2px;
             }
-            .nav-links a,
-            .nav-links .dropdown-toggle,
-            .custom-dropdown .dropdown-toggle {
-                font-size: 0.7rem;
-                padding: 4px 8px;
+
+            .nav-brand-container {
+                order: 1;
+                flex: 1 1 100%;
+                justify-content: center;
             }
-            .nav-cart-link .cart-text {
-                display: none;
+
+            .header-search-box {
+                order: 3;
+                flex: 1 1 100%;
+                max-width: 100%;
             }
-            .custom-dropdown .dropdown-menu {
-                left: 50%;
-                transform: translateX(-50%);
-                min-width: 200px;
+
+            .navbar-actions {
+                order: 2;
+                flex: 1 1 100%;
+                margin-left: 0;
+                justify-content: center;
+            }
+
+            .navbar-row-bottom {
+                justify-content: center;
+            }
+
+            .nav-links a {
+                padding: 5px 11px;
+                font-size: 0.76rem;
+            }
+
+            .nav-brand {
+                font-size: 1.1rem;
+            }
+
+            .header-logo {
+                height: 35px;
+            }
+
+            .user-menu-dropdown {
+                right: 50%;
+                transform: translateX(50%);
             }
         }
 
         @media (max-width: 480px) {
-            .main-navbar {
-                padding: 6px 10px;
+            .nav-links a {
+                padding: 4px 9px;
+                font-size: 0.68rem;
             }
-            .nav-brand {
-                font-size: 1rem;
+
+            .nav-links a i {
+                font-size: 0.72rem;
             }
-            .header-logo {
-                height: 30px;
-            }
-            .nav-links a,
-            .nav-links .dropdown-toggle,
-            .custom-dropdown .dropdown-toggle {
-                font-size: 0.65rem;
-                padding: 3px 6px;
-            }
-            .nav-links a i,
-            .nav-links .dropdown-toggle i {
-                font-size: 0.7rem;
-            }
+
             .nav-cart-link {
-                padding: 3px 8px !important;
+                padding: 5px 12px !important;
             }
+
             .header-search-box input {
-                font-size: 0.7rem;
-                padding: 5px 10px 5px 28px;
+                padding: 7px 12px 7px 32px;
+                font-size: 0.75rem;
             }
-            .btn-login,
-            .btn-logout {
-                font-size: 0.65rem !important;
-                padding: 3px 10px !important;
-            }
-            .custom-dropdown .dropdown-toggle {
-                font-size: 0.65rem;
-                padding: 3px 10px 3px 8px;
-            }
-            .custom-dropdown .dropdown-menu {
-                min-width: 160px;
-                left: 0;
-                transform: none;
+
+            .user-menu-toggle span.user-name-text {
+                max-width: 70px;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
         }
     </style>
@@ -527,133 +521,136 @@
 
 <body>
 
-    <!-- ============================================ -->
-    <!-- NAVBAR -->
-    <!-- ============================================ -->
     <nav class="main-navbar">
 
-        <!-- Logo -->
-        <a href="/" class="nav-brand-container">
-            <img src="https://res.cloudinary.com/o4zunnbp/image/upload/v1783692811/GIFTYPACKLOGO_mc4kpm.png" alt="GIFTYPACK Logo" class="header-logo" />
-            <span class="nav-brand">GIFTYPACK</span>
-        </a>
+        <!-- Row 1: brand, search, cart, account -->
+        <div class="navbar-row navbar-row-top">
 
-        <!-- Search -->
-        <div class="header-search-box">
-            <span class="search-icon-placeholder">🔍</span>
-            <input type="text" id="globalProductSearch" placeholder="Search..." autocomplete="off" />
-        </div>
+            <a href="/" class="nav-brand-container">
+                <img src="https://res.cloudinary.com/o4zunnbp/image/upload/v1783692811/GIFTYPACKLOGO_mc4kpm.png" alt="GIFTYPACK Logo" class="header-logo" />
+                <span class="nav-brand">GIFTYPACK</span>
+            </a>
 
-        <!-- ===== NAV LINKS ===== -->
-        <ul class="nav-links">
+            <div class="header-search-box">
+                <span class="search-icon-placeholder">🔍</span>
+                <input type="text" id="globalProductSearch" placeholder="Search..." autocomplete="off" />
+            </div>
 
-            <!-- Home -->
-            <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+            <div class="navbar-actions">
 
-            <!-- Become a Seller -->
-            <li><a href="/become-a-seller"><i class="fas fa-user-plus"></i> Seller</a></li>
-
-            <!-- Make a Custom Order (visible to logged-in users only) -->
-            <% if (typeof user !== 'undefined' && user) { %>
-                <li><a href="/custom-orders"><i class="fas fa-edit"></i> Custom Order</a></li>
-            <% } %>
-
-            <!-- ===== Categories Dropdown (Custom) ===== -->
-            <li class="custom-dropdown">
-                <button class="dropdown-toggle" id="categoriesToggle">
-                    <i class="fas fa-boxes"></i> Categories <i class="fas fa-chevron-down" style="font-size:0.6rem;margin-left:2px;"></i>
-                </button>
-                <div class="dropdown-menu" id="categoriesMenu">
-                    <a href="/category/shopping-bags">Shopping Bag's</a>
-                    <a href="/category/courier-poly">Courier Poly</a>
-                    <a href="/category/stickers">Sticker's</a>
-                    <a href="/category/bubble-wrap">Bubble Wrap</a>
-                    <a href="/category/cards">Card's</a>
-                    <a href="/category/scotch-tape">Scotch Tape</a>
-                    <div class="divider"></div>
-                    <div class="optgroup-label">Box's</div>
-                    <a href="/category/curtain-box">1. Curtain Box</a>
-                    <a href="/category/curtain-premium-box">2. Curtain Premium Box</a>
-                    <a href="/category/premium-box">3. Premium Box</a>
-                </div>
-            </li>
-
-            <!-- Custom Order links (additional) -->
-            <% if (typeof user !== 'undefined' && user) { %>
-                <li><a href="/my-custom-orders"><i class="fas fa-list-ul"></i> My Orders</a></li>
-            <% } %>
-
-            <!-- Admin: Custom Orders Management -->
-            <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
-                <li><a href="/admin/custom-orders"><i class="fas fa-clipboard-list"></i> Custom Mgmt</a></li>
-            <% } %>
-
-            <!-- Seller: Bid on Orders -->
-            <% if (typeof user !== 'undefined' && user && (user.role === 'seller' || user.role === 'authorized_cashier' || user.isSuperAdmin === true)) { %>
-                <li><a href="/seller/custom-orders"><i class="fas fa-gavel"></i> Bid</a></li>
-            <% } %>
-
-            <!-- Terminal (cashier/admin) -->
-            <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.role === 'authorized_cashier' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
-                <li><a href="/terminal"><i class="fas fa-cash-register"></i> Terminal</a></li>
-            <% } %>
-
-            <!-- My Orders (regular user) -->
-            <% if (typeof user !== 'undefined' && user) { %>
-                <li><a href="/my-orders"><i class="fas fa-box"></i> Orders</a></li>
-            <% } %>
-
-            <!-- Cart -->
-            <li>
                 <a href="/cart" class="nav-cart-link" id="cartLink">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-text">Cart</span>
                     <span class="cart-badge zero" id="cartCount">0</span>
                 </a>
-            </li>
 
-            <!-- Super Admin -->
-            <% if (typeof user !== 'undefined' && user && (user.username === 'superadmin' || user.isSuperAdmin === true)) { %>
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <div class="user-menu">
+                        <button type="button" class="user-menu-toggle" id="userMenuToggle">
+                            <i class="fas fa-user-circle"></i>
+                            <span class="user-name-text"><%= user.username %></span>
+                            <% if (user.isSuperAdmin === true || user.username === 'superadmin') { %>
+                                <span class="super-admin-badge">Super</span>
+                            <% } %>
+                            <i class="fas fa-chevron-down menu-caret"></i>
+                        </button>
+
+                        <div class="user-menu-dropdown" id="userMenuDropdown">
+
+                            <!-- Customer links -->
+                            <div class="menu-section-label">Your account</div>
+                            <a href="/profile"><i class="fas fa-user-circle"></i> Profile</a>
+                            <a href="/my-orders"><i class="fas fa-box"></i> My Orders</a>
+                            <a href="/custom-order"><i class="fas fa-pencil-alt"></i> Custom Order</a>
+                            <a href="/my-custom-orders"><i class="fas fa-list-ul"></i> My Custom Orders</a>
+
+                            <!-- Seller links -->
+                            <% if (user.role === 'seller' || user.role === 'authorized_cashier' || user.isSuperAdmin === true) { %>
+                                <div class="menu-divider"></div>
+                                <div class="menu-section-label">Seller tools</div>
+                                <a href="/seller/custom-orders"><i class="fas fa-gavel"></i> Bid on Orders</a>
+                            <% } %>
+
+                            <!-- Terminal / point of sale -->
+                            <% if (user.role === 'admin' || user.role === 'authorized_cashier' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true) { %>
+                                <div class="menu-divider"></div>
+                                <div class="menu-section-label">Point of sale</div>
+                                <a href="/terminal"><i class="fas fa-cash-register"></i> Terminal</a>
+                            <% } %>
+
+                            <!-- Admin links -->
+                            <% if (user.role === 'admin' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true) { %>
+                                <div class="menu-divider"></div>
+                                <div class="menu-section-label">Store management</div>
+                                <a href="/admin/custom-orders"><i class="fas fa-clipboard-list"></i> Review Custom Orders</a>
+                                <a href="/admin/orders"><i class="fas fa-clipboard-list"></i> Order Management</a>
+                                <a href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a>
+                                <a href="/sales"><i class="fas fa-chart-bar"></i> Sales</a>
+                                <a href="/admin/stock-report"><i class="fas fa-boxes"></i> Stock Report</a>
+                                <a href="/admin/users"><i class="fas fa-users"></i> Users</a>
+                            <% } %>
+
+                            <!-- Super admin links -->
+                            <% if (user.username === 'superadmin' || user.isSuperAdmin === true) { %>
+                                <div class="menu-divider"></div>
+                                <div class="menu-section-label">Super admin</div>
+                                <a href="/superadmin/dashboard"><i class="fas fa-crown"></i> Super Dashboard</a>
+                                <a href="/superadmin/admins"><i class="fas fa-user-shield"></i> Manage Admins</a>
+                            <% } %>
+
+                            <div class="menu-divider"></div>
+                            <a href="/logout" class="btn-logout-menu"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
+                <% } else { %>
+                    <a href="/login" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                <% } %>
+
+            </div>
+        </div>
+
+        <!-- Row 2: site navigation shared by every visitor -->
+        <div class="navbar-row navbar-row-bottom">
+            <ul class="nav-links">
                 <li>
-                    <a href="/superadmin/dashboard" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff !important; font-weight: 700; border-radius: 50px; padding: 4px 14px; font-size: 0.7rem;">
-                        <i class="fas fa-crown"></i> Super
+                    <a href="/">
+                        <i class="fas fa-home"></i> Home
                     </a>
                 </li>
-            <% } %>
-
-            <!-- Admin: Order Management, Inventory, Sales, Stock, Users -->
-            <% if (typeof user !== 'undefined' && user && (user.role === 'admin' || user.username.toLowerCase() === 'admin' || user.isSuperAdmin === true)) { %>
-                <li><a href="/admin/orders"><i class="fas fa-clipboard-list"></i> Orders</a></li>
-                <li><a href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a></li>
-                <li><a href="/sales"><i class="fas fa-chart-bar"></i> Sales</a></li>
-                <li><a href="/admin/stock-report"><i class="fas fa-boxes"></i> Stock</a></li>
-                <li><a href="/admin/users"><i class="fas fa-users"></i> Users</a></li>
-            <% } %>
-
-            <!-- Super Admin: Admins -->
-            <% if (typeof user !== 'undefined' && user && (user.username === 'superadmin' || user.isSuperAdmin === true)) { %>
-                <li><a href="/superadmin/admins"><i class="fas fa-user-shield"></i> Admins</a></li>
-            <% } %>
-
-            <!-- User Profile / Login / Logout -->
-            <% if (typeof user !== 'undefined' && user) { %>
                 <li>
-                    <a href="/profile" class="user-name-display">
-                        <i class="fas fa-user-circle"></i> <%= user.username %>
-                        <% if (user.isSuperAdmin === true || user.username === 'superadmin') { %>
-                            <span class="super-admin-badge">Super</span>
-                        <% } %>
+                    <a href="/become-a-seller">
+                        <i class="fas fa-user-plus"></i> Become a Seller
                     </a>
                 </li>
-                <li><a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-            <% } else { %>
-                <li><a href="/login" class="btn-login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
-            <% } %>
+                <li>
+                    <a href="/custom-orders">
+                        <i class="fas fa-edit"></i> Make a Custom Order
+                    </a>
+                </li>
+            </ul>
 
-        </ul>
+            <label for="Categories" class="visually-hidden" style="position:absolute; left:-9999px;">Select a Category</label>
+            <select name="Categories" id="Categories" class="nav-category-select">
+                <option value="">Select a Category</option>
+                <option value="Shopping Bag's">Shopping Bag's</option>
+                <option value="Courier Poly">Courier Poly</option>
+                <option value="Sticker's">Sticker's</option>
+                <option value="Bouble Wrap">Bouble Wrap</option>
+                <option value="Card's">Card's</option>
+                <option value="Scotch Tape">Scotch Tape</option>
+                <optgroup label="Box's">
+                    <option value="1.Curtain Box">1.Curtain Box</option>
+                    <option value="2.Curtain premium Box">2.Curtain premium Box</option>
+                    <option value="3.Premium Box">3.Premium Box</option>
+                </optgroup>
+            </select>
+        </div>
+
     </nav>
 
-    <!-- Guest Cart Banner -->
+
     <% if (typeof user === 'undefined' || !user) { %>
         <div class="guest-cart-banner">
             <i class="fas fa-shopping-cart"></i>
@@ -662,52 +659,62 @@
         </div>
     <% } %>
 
-    <!-- Notification Container -->
+
     <div id="notificationContainer"></div>
 
-    <!-- ============================================ -->
-    <!-- SCRIPTS -->
-    <!-- ============================================ -->
+
     <script>
         $(document).ready(function() {
 
-            // ===== CATEGORIES DROPDOWN TOGGLE =====
-            $('#categoriesToggle').on('click', function(e) {
+            // Account dropdown menu: click to open/close, click outside to close
+            $('#userMenuToggle').on('click', function(e) {
                 e.stopPropagation();
-                $('#categoriesMenu').toggleClass('show');
+                $(this).toggleClass('open');
+                $('#userMenuDropdown').toggleClass('open');
             });
 
-            $(document).on('click', function(e) {
-                if (!$(e.target).closest('.custom-dropdown').length) {
-                    $('#categoriesMenu').removeClass('show');
+            $('#userMenuDropdown').on('click', function(e) {
+                e.stopPropagation();
+            });
+
+            $(document).on('click', function() {
+                $('#userMenuToggle').removeClass('open');
+                $('#userMenuDropdown').removeClass('open');
+            });
+
+            $(document).on('keyup', function(e) {
+                if (e.key === 'Escape') {
+                    $('#userMenuToggle').removeClass('open');
+                    $('#userMenuDropdown').removeClass('open');
                 }
             });
 
-            // ===== SEARCH =====
             $('#globalProductSearch').on('keyup', function() {
                 var searchString = $(this).val().toLowerCase().trim();
+
                 $('.log-container table tbody tr').filter(function() {
                     var receiptCode = $(this).find('td:nth-child(1)').text().toLowerCase();
                     var productName = $(this).find('td:nth-child(3)').text().toLowerCase();
-                    var isMatch = (receiptCode.indexOf(searchString) > -1) || (productName.indexOf(searchString) >
-                    -1);
+                    var isMatch = (receiptCode.indexOf(searchString) > -1) || (productName.indexOf(searchString) > -1);
                     $(this).toggle(isMatch);
                 });
+
                 $('.home-catalog-grid .home-card').filter(function() {
                     var productNameText = $(this).find('strong').text().toLowerCase();
                     $(this).toggle(productNameText.indexOf(searchString) > -1);
                 });
+
                 $('.product-grid .card').filter(function() {
                     var terminalItemText = $(this).find('strong').text().toLowerCase();
                     $(this).toggle(terminalItemText.indexOf(searchString) > -1);
                 });
+
                 $('.admin-inventory-grid .card').filter(function() {
                     var catalogItemText = $(this).find('.card-body strong').text().toLowerCase();
                     $(this).toggle(catalogItemText.indexOf(searchString) > -1);
                 });
             });
 
-            // ===== CART COUNT =====
             window.updateCartCount = function() {
                 $.ajax({
                     url: '/api/cart/view',
@@ -717,7 +724,9 @@
                             var count = response.count || 0;
                             var $badge = $('#cartCount');
                             $badge.text(count);
+
                             $('#guestCartCount').text(count);
+
                             if (count === 0) {
                                 $badge.addClass('zero');
                             } else {
@@ -731,7 +740,6 @@
                 });
             };
 
-            // ===== NOTIFICATION =====
             window.showNotification = function(message, type, icon) {
                 var container = $('#notificationContainer');
                 var icons = {
@@ -742,8 +750,8 @@
                 };
                 var notification = $(
                     '<div class="notification notification-' + type + '">' +
-                    '<i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i>' +
-                    '<span>' + message + '</span>' +
+                        '<i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i>' +
+                        '<span>' + message + '</span>' +
                     '</div>'
                 );
                 container.append(notification);
@@ -752,12 +760,11 @@
                 }, 3000);
             };
 
-            // ===== INIT =====
             if (typeof updateCartCount === 'function') {
                 updateCartCount();
             }
 
-            console.log('✅ Professional Header Loaded');
+            console.log('✅ Header Loaded with Cart Badge!');
         });
     </script>
 
