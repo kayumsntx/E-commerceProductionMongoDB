@@ -956,7 +956,6 @@ app.get("/logout", async (req, res) => {
 });
 
 // ---------- HOME ----------
-
 app.get("/", async (req, res) => {
   try {
     // 🔥 ক্যাটাগরি ফিল্টার লজিক
@@ -974,7 +973,6 @@ app.get("/", async (req, res) => {
     const parentCategories = allCats.filter(c => !c.parentId);
     const childCategories = allCats.filter(c => c.parentId);
 
-    // মূল ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি যুক্ত করা
     const categoryTree = parentCategories.map(parent => ({
         ...parent.toObject(),
         children: childCategories.filter(child => child.parentId.toString() === parent._id.toString())
@@ -991,6 +989,7 @@ app.get("/", async (req, res) => {
       }
     }
 
+    // ✅ এই অংশটি অবশ্যই try { } এর ভেতরে থাকতে হবে।
     const specialOffers = [
       {
         title: "Summer Bundle",
@@ -1006,12 +1005,12 @@ app.get("/", async (req, res) => {
 
     res.render("home", {
       products: products,
-      offers: specialOffers,
+      offers: specialOffers, // ✅ এখানে ঠিকঠাক পাস হচ্ছে
       cartCount: cartCount,
       user: req.session.user || null,
       isGuest: !req.session.user,
-      categories: categoryTree,        // 🔥 Tree আকারে ক্যাটাগরি পাঠানো হচ্ছে
-      currentCategory: category || null // 🔥 ড্রপডাউনে সিলেক্টেড রাখার জন্য
+      categories: categoryTree,
+      currentCategory: category || null
     });
   } catch (err) {
     console.error("Home error:", err);
