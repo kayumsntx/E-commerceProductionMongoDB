@@ -991,18 +991,18 @@ app.get("/", async (req, res) => {
       }
     }
 
-    // const specialOffers = [
-    //   {
-    //     title: "Summer Bundle",
-    //     description: "Get 15% off when buying a two bag together.",
-    //     badge: "Hot Deal",
-    //   },
-    //   {
-    //     title: "Laptop Bag Upgrade Promo",
-    //     description: "Free shipping and a premium .",
-    //     badge: "Limited Time",
-    //   },
-    // ];
+    const specialOffers = [
+      {
+        title: "Summer Bundle",
+        description: "Get 15% off when buying a two bag together.",
+        badge: "Hot Deal",
+      },
+      {
+        title: "Laptop Bag Upgrade Promo",
+        description: "Free shipping and a premium .",
+        badge: "Limited Time",
+      },
+    ];
 
     res.render("home", {
       products: products,
