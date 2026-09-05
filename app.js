@@ -956,6 +956,7 @@ app.get("/logout", async (req, res) => {
 });
 
 // ---------- HOME ----------
+
 app.get("/", async (req, res) => {
   try {
     // 🔥 ক্যাটাগরি ফিল্টার লজিক
@@ -968,8 +969,16 @@ app.get("/", async (req, res) => {
         products = await getAllProducts();
     }
 
-    // 🔥 হেডার ড্রপডাউনের জন্য ক্যাটাগরি লোড
-    const categories = await Category.find().sort({ order: 1 });
+    // 🔥 হেডার ড্রপডাউনে সাব-ক্যাটাগরি সহ (Tree) ক্যাটাগরি লোড
+    const allCats = await Category.find().sort({ order: 1 });
+    const parentCategories = allCats.filter(c => !c.parentId);
+    const childCategories = allCats.filter(c => c.parentId);
+
+    // মূল ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি যুক্ত করা
+    const categoryTree = parentCategories.map(parent => ({
+        ...parent.toObject(),
+        children: childCategories.filter(child => child.parentId.toString() === parent._id.toString())
+    }));
 
     let cartCount = 0;
     if (req.session.user) {
@@ -1001,38 +1010,13 @@ app.get("/", async (req, res) => {
       cartCount: cartCount,
       user: req.session.user || null,
       isGuest: !req.session.user,
-      categories: categories,        // 🔥 ক্যাটাগরি পাঠানো হচ্ছে
+      categories: categoryTree,        // 🔥 Tree আকারে ক্যাটাগরি পাঠানো হচ্ছে
       currentCategory: category || null // 🔥 ড্রপডাউনে সিলেক্টেড রাখার জন্য
     });
   } catch (err) {
     console.error("Home error:", err);
     res.status(500).send("Internal server error");
   }
-});
-
-// ---------- PRODUCT DETAILS PAGE ----------
-app.get("/product/:productId", async (req, res) => {
-    try {
-        const product = await Product.findOne({ id: req.params.productId });
-        
-        if (!product) {
-            return res.status(404).send("Product not found");
-        }
-
-        // 🔥 হেডারের জন্য ক্যাটাগরি লোড
-        const categories = await Category.find().sort({ order: 1 });
-        
-        res.render("product-details", {
-            product: product,
-            user: req.session.user || null,
-            isGuest: !req.session.user,
-            categories: categories, // 🔥 যোগ করা হয়েছে
-            currentCategory: null
-        });
-    } catch (err) {
-        console.error("Product details error:", err);
-        res.status(500).send("Internal server error");
-    }
 });
 
 // ---------- CART PAGE ----------
@@ -1522,18 +1506,7 @@ app.delete('/api/admin/categories/:id', requireAdmin, async (req, res) => {
     }
 });
 
-// ক্যাটাগরি লোড করে Tree আকারে সাজানো
-const allCats = await Category.find().sort({ order: 1 });
-const parentCategories = allCats.filter(c => !c.parentId);
-const childCategories = allCats.filter(c => c.parentId);
 
-const categoryTree = parentCategories.map(parent => ({
-    ...parent.toObject(),
-    children: childCategories.filter(child => child.parentId.toString() === parent._id.toString())
-}));
-
-// res.render এ পাঠান:
-categories: categoryTree,
 
 
 
