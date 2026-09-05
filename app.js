@@ -267,7 +267,16 @@ const avatarUpload = multer({
   limits: { fileSize: 2 * 1024 * 1024 } // 2MB limit
 });
 
-
+// Category Storage for Cloudinary
+const categoryStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'bagnest_categories',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif'],
+    transformation: [{ width: 300, height: 300, crop: 'fill' }] // গোল ছবির জন্য স্কয়ার
+  },
+});
+const uploadCategoryImage = multer({ storage: categoryStorage }).single('categoryImage');
 // MIDDLEWARE
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -1466,18 +1475,41 @@ app.get('/api/categories', async (req, res) => {
     res.json(tree);
 });
 
-app.post('/api/admin/categories', requireAdmin, async (req, res) => {
+// Category Add (with Image Upload)
+app.post('/api/admin/categories', requireAdmin, uploadCategoryImage, async (req, res) => {
     try {
-        const { name, parentId, imageUrl } = req.body; // ✅ imageUrl যোগ করুন
+        const { name, parentId } = req.body;
+        const image = req.file ? req.file.path : ''; // ফাইল থাকলে পাথ, না থাকলে খালি
+
         const lastCat = await Category.findOne().sort({ order: -1 });
         const newCat = new Category({
             name,
             parentId: parentId || null,
             order: lastCat ? lastCat.order + 1 : 1,
-            image: imageUrl || '' // ✅ ছবির লিংক সেভ করুন
+            image: image
         });
         await newCat.save();
         res.status(201).json({ success: true, category: newCat });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
+
+// Category Update (Edit with Image Upload) -> ID অপরিবর্তিত থাকবে
+app.put('/api/admin/categories/:id', requireAdmin, uploadCategoryImage, async (req, res) => {
+    try {
+        const { name, parentId } = req.body;
+        const updateData = { name, parentId: parentId || null };
+
+        // নতুন ছবি আপলোড হলে আপডেট হবে, না দিলে পুরনো ছবি থাকবে
+        if (req.file) {
+            updateData.image = req.file.path;
+        }
+
+        const updatedCat = await Category.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        if (!updatedCat) return res.status(404).json({ success: false, message: "Category not found" });
+
+        res.json({ success: true, category: updatedCat });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });
     }
