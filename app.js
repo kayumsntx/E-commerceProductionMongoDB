@@ -1469,15 +1469,27 @@ app.get("/seller/custom-orders", requireSellerOrAdmin, (req, res) => {
 // ---------- CATEGORY APIs ----------
 app.get('/api/categories', async (req, res) => {
     const categories = await Category.find().sort({ order: 1 });
-    res.json(categories);
+    
+    // মূল ক্যাটাগরি (Parent) এবং সাব-ক্যাটাগরি (Child) আলাদা করা
+    const parentCategories = categories.filter(c => !c.parentId);
+    const childCategories = categories.filter(c => c.parentId);
+    
+    // প্রতিটি Parent-এর ভেতরে তার Children গুলো যুক্ত করা (Tree Structure)
+    const tree = parentCategories.map(parent => ({
+        ...parent.toObject(),
+        children: childCategories.filter(child => child.parentId.toString() === parent._id.toString())
+    }));
+
+    res.json(tree);
 });
 
 app.post('/api/admin/categories', requireAdmin, async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, parentId } = req.body;
         const lastCat = await Category.findOne().sort({ order: -1 });
         const newCat = new Category({
             name,
+            parentId: parentId || null, // সাব-ক্যাটাগরি হলে parentId, না হলে null
             order: lastCat ? lastCat.order + 1 : 1
         });
         await newCat.save();
@@ -1501,12 +1513,29 @@ app.post('/api/admin/categories/reorder', requireAdmin, async (req, res) => {
 
 app.delete('/api/admin/categories/:id', requireAdmin, async (req, res) => {
     try {
+        // সাব-ক্যাটাগরি থাকলে সেগুলোও ডিলিট করা হবে
+        await Category.deleteMany({ parentId: req.params.id });
         await Category.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });
     }
 });
+
+// ক্যাটাগরি লোড করে Tree আকারে সাজানো
+const allCats = await Category.find().sort({ order: 1 });
+const parentCategories = allCats.filter(c => !c.parentId);
+const childCategories = allCats.filter(c => c.parentId);
+
+const categoryTree = parentCategories.map(parent => ({
+    ...parent.toObject(),
+    children: childCategories.filter(child => child.parentId.toString() === parent._id.toString())
+}));
+
+// res.render এ পাঠান:
+categories: categoryTree,
+
+
 
 // ---------- CART APIs ----------
 app.post("/api/cart/add", async (req, res) => {

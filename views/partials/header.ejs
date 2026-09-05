@@ -634,11 +634,24 @@
         <label for="Categories" class="visually-hidden" style="position:absolute; left:-9999px;">Select a Category</label>
 <select name="Categories" id="Categories" class="nav-category-select" onchange="if(this.value) window.location.href='/?category='+this.value">
     <option value="">Select a Category</option>
+
     <% if (typeof categories !== 'undefined' && categories.length > 0) { %>
-        <% categories.forEach(cat => { %>
-            <option value="<%= cat._id %>" <%= (typeof currentCategory !== 'undefined' && currentCategory === cat._id.toString()) ? 'selected' : '' %>>
-                <%= cat.name %>
-            </option>
+        <% categories.forEach(parent => { %>
+            <% if (!parent.children || parent.children.length === 0) { %>
+                <!-- শুধু মূল ক্যাটাগরি, সাব-ক্যাটাগরি নেই -->
+                <option value="<%= parent._id %>" <%= (typeof currentCategory !== 'undefined' && currentCategory === parent._id.toString()) ? 'selected' : '' %>>
+                    <%= parent.name %>
+                </option>
+            <% } else { %>
+                <!-- Optgroup (Box-এর মতো) -->
+                <optgroup label="<%= parent.name %>">
+                    <% parent.children.forEach(child => { %>
+                        <option value="<%= child._id %>" <%= (typeof currentCategory !== 'undefined' && currentCategory === child._id.toString()) ? 'selected' : '' %>>
+                            <%= child.name %>
+                        </option>
+                    <% }) %>
+                </optgroup>
+            <% } %>
         <% }) %>
     <% } %>
 </select>

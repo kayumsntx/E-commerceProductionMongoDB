@@ -5,71 +5,128 @@
     .cat-order-btn { cursor: pointer; background: #f0f0f0; border: 1px solid #ddd; border-radius: 5px; padding: 5px 10px; margin: 0 5px; }
     .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
     .input-group input { padding: 10px; flex: 1; border: 1px solid #ddd; border-radius: 5px; }
+    .input-group select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; min-width: 200px; }
     .input-group button { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+    .cat-child { margin-left: 40px !important; font-size: 0.9rem; color: #555; border-bottom: 1px dashed #eee; }
+    .cat-child span { font-style: italic; }
 </style>
 
 <div class="cat-container">
     <h2>Category Management</h2>
+    
     <div class="input-group">
         <input type="text" id="newCatName" placeholder="Enter Category Name (e.g. Sticker's)">
-        <button onclick="addCategory()">+ Add Category</button>
+        
+        <select id="parentCatSelect">
+            <option value="">-- Select Parent (Optional) --</option>
+        </select>
+
+        <button onclick="addCategory()">+ Add</button>
     </div>
+    
     <div id="catList"></div>
 </div>
 
 <script>
     let categories = [];
+
     async function loadCategories() {
         const res = await fetch('/api/categories');
-        categories = await res.json();
+        const data = await res.json(); // এখন API Tree আকারে ডেটা দেবে
+        
+        categories = data;
+
+        // প্যারেন্ট ক্যাটাগরি সিলেক্ট বক্সে লোড করা
+        const parentSelect = document.getElementById('parentCatSelect');
+        parentSelect.innerHTML = '<option value="">-- Select Parent (Optional) --</option>';
+        
+        categories.forEach(parent => {
+            const option = document.createElement('option');
+            option.value = parent._id;
+            option.textContent = parent.name;
+            parentSelect.appendChild(option);
+        });
+
         renderCategories();
     }
+
     function renderCategories() {
         const list = document.getElementById('catList');
         list.innerHTML = '';
-        categories.forEach((cat, index) => {
+        
+        categories.forEach((parent, index) => {
+            // মূল ক্যাটাগরি (Parent)
             const div = document.createElement('div');
             div.className = 'cat-item';
             div.innerHTML = `
-                <span>${cat.name}</span>
+                <span><strong>${parent.name}</strong></span>
                 <div>
                     <button class="cat-order-btn" onclick="moveCategory(${index}, 'up')">↑</button>
                     <button class="cat-order-btn" onclick="moveCategory(${index}, 'down')">↓</button>
-                    <button class="cat-order-btn" onclick="deleteCategory('${cat._id}')">Delete</button>
+                    <button class="cat-order-btn" onclick="deleteCategory('${parent._id}')">Delete</button>
                 </div>
             `;
             list.appendChild(div);
+
+            // সাব-ক্যাটাগরি (Children)
+            if (parent.children && parent.children.length > 0) {
+                parent.children.forEach(child => {
+                    const childDiv = document.createElement('div');
+                    childDiv.className = 'cat-item cat-child';
+                    childDiv.innerHTML = `
+                        <span>↳ ${child.name}</span>
+                        <div>
+                            <button class="cat-order-btn" onclick="deleteCategory('${child._id}')">Delete</button>
+                        </div>
+                    `;
+                    list.appendChild(childDiv);
+                });
+            }
         });
     }
+
     async function addCategory() {
         const name = document.getElementById('newCatName').value;
+        const parentId = document.getElementById('parentCatSelect').value;
+        
         if(!name) return alert('Please enter a name');
+
         await fetch('/api/admin/categories', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, parentId })
         });
+
         document.getElementById('newCatName').value = '';
+        document.getElementById('parentCatSelect').value = '';
         await loadCategories();
     }
+
     async function deleteCategory(id) {
         if(confirm('Delete this category?')) {
             await fetch('/api/admin/categories/' + id, { method: 'DELETE' });
             await loadCategories();
         }
     }
+
+    // শুধুমাত্র মূল ক্যাটাগরি (Parent) গুলো সাজানো যাবে
     async function moveCategory(index, direction) {
         const newIndex = direction === 'up' ? index - 1 : index + 1;
         if (newIndex < 0 || newIndex >= categories.length) return;
+        
         [categories[index], categories[newIndex]] = [categories[newIndex], categories[index]];
+        
         const orderedIds = categories.map(c => c._id);
         await fetch('/api/admin/categories/reorder', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ orderedIds })
         });
+        
         renderCategories();
     }
+
     loadCategories();
 </script>
-<%- include('partials/footer') %>দ
+
+<%- include('partials/footer') %>
