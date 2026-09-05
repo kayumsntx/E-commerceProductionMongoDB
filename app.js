@@ -1469,12 +1469,13 @@ app.get('/api/categories', async (req, res) => {
 
 app.post('/api/admin/categories', requireAdmin, async (req, res) => {
     try {
-        const { name, parentId } = req.body;
+        const { name, parentId, imageUrl } = req.body; // ✅ imageUrl যোগ করুন
         const lastCat = await Category.findOne().sort({ order: -1 });
         const newCat = new Category({
             name,
-            parentId: parentId || null, // সাব-ক্যাটাগরি হলে parentId, না হলে null
-            order: lastCat ? lastCat.order + 1 : 1
+            parentId: parentId || null,
+            order: lastCat ? lastCat.order + 1 : 1,
+            image: imageUrl || '' // ✅ ছবির লিংক সেভ করুন
         });
         await newCat.save();
         res.status(201).json({ success: true, category: newCat });

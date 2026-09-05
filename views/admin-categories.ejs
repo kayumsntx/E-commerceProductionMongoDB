@@ -14,15 +14,14 @@
 <div class="cat-container">
     <h2>Category Management</h2>
     
-    <div class="input-group">
-        <input type="text" id="newCatName" placeholder="Enter Category Name (e.g. Sticker's)">
-        
-        <select id="parentCatSelect">
-            <option value="">-- Select Parent (Optional) --</option>
-        </select>
-
-        <button onclick="addCategory()">+ Add</button>
-    </div>
+ <div class="input-group">
+    <input type="text" id="newCatName" placeholder="Enter Category Name">
+    <input type="text" id="newCatImage" placeholder="Paste Image URL (e.g. https://...jpg)" style="flex: 1;">
+    <select id="parentCatSelect" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        <option value="">-- Select Parent (Optional) --</option>
+    </select>
+    <button onclick="addCategory()">+ Add</button>
+</div>
     
     <div id="catList"></div>
 </div>
@@ -86,21 +85,21 @@
     }
 
     async function addCategory() {
-        const name = document.getElementById('newCatName').value;
-        const parentId = document.getElementById('parentCatSelect').value;
-        
-        if(!name) return alert('Please enter a name');
-
-        await fetch('/api/admin/categories', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name, parentId })
-        });
-
-        document.getElementById('newCatName').value = '';
-        document.getElementById('parentCatSelect').value = '';
-        await loadCategories();
-    }
+    const name = document.getElementById('newCatName').value;
+    const imageUrl = document.getElementById('newCatImage').value;
+    const parentId = document.getElementById('parentCatSelect').value;
+    if(!name) return alert('Please enter a name');
+    
+    await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, parentId, imageUrl }) // ✅ imageUrl পাঠান
+    });
+    document.getElementById('newCatName').value = '';
+    document.getElementById('newCatImage').value = '';
+    document.getElementById('parentCatSelect').value = '';
+    await loadCategories();
+}
 
     async function deleteCategory(id) {
         if(confirm('Delete this category?')) {
