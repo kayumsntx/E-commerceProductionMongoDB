@@ -351,6 +351,18 @@ app.use((req, res, next) => {
 
 // HELPER FUNCTIONS
 
+//--------route--------------------------------
+// ============================================
+// app.js
+        
+app.get("/copy", (req, res) => {
+    res.render("copy-page", {
+        user: req.session.user || null,
+        isGuest: !req.session.user
+    });
+});
+
+// ============================================
 
 // User functions
 async function getUserByUsername(username) {

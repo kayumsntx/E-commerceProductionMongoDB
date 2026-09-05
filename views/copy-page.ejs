@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copy</title>
+   <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+            padding: 30px;
+            position: relative;
+        }
+
+        /* ============================================
+           ERROR IMAGE - FULL SCREEN FIT (Cover)
+           ============================================ */
+        .error-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .error-bg img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* ============================================
+           COPY BUTTON - BOTTOM RIGHT
+           ============================================ */
+        .copy-container {
+            text-align: right;
+            position: relative;
+            z-index: 1;
+        }
+
+        .copy-btn {
+            background: transparent;
+            color: #a0aec0;
+            border: none;
+            padding: 4px 8px;
+            font-weight: 300;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.5px;
+            font-family: inherit;
+        }
+
+        .copy-btn:hover {
+            color: #718096;
+        }
+
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+
+        .copy-btn i {
+            font-size: 0.7rem;
+            opacity: 0.4;
+        }
+
+        .copy-status {
+            display: block;
+            margin-top: 2px;
+            font-size: 0.6rem;
+            color: #e2e8f0;
+            transition: color 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .copy-status.success {
+            color: #e2e8f0;
+        }
+
+        /* ============================================
+           RESPONSIVE: ছোট স্ক্রিনে
+           ============================================ */
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            .copy-btn {
+                font-size: 0.65rem;
+                padding: 3px 6px;
+            }
+            .copy-btn i {
+                font-size: 0.6rem;
+            }
+            .copy-status {
+                font-size: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+            .copy-btn {
+                font-size: 0.55rem;
+                padding: 2px 5px;
+            }
+            .copy-btn i {
+                font-size: 0.5rem;
+            }
+            .copy-status {
+                font-size: 0.45rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================ -->
+    <!-- ERROR IMAGE AS BACKGROUND (আপনার লিংক দিন) -->
+    <!-- ============================================ -->
+    <div class="error-bg">
+        <img src="" />
+    </div>
+
+    <!-- ============================================ -->
+    <!-- COPY BUTTON - BOTTOM RIGHT -->
+    <!-- ============================================ -->
+    <div class="copy-container">
+        <button class="copy-btn" id="copyBtn">
+            <i class="fas fa-copy"></i>
+            <span id="copyBtnText">copy</span>
+        </button>
+        <span class="copy-status" id="copyStatus">ready</span>
+    </div>
+
+    <script>
+        // ============================================
+        // আপনার কাস্টম টেক্সট (যা কপি হবে)
+        // ============================================
+        const customText = `
+test text
+        `;
+
+        // ============================================
+        // COPY FUNCTION
+        // ============================================
+        async function copyCustomText() {
+            const btn = document.getElementById('copyBtn');
+            const btnText = document.getElementById('copyBtnText');
+            const status = document.getElementById('copyStatus');
+
+            try {
+                await navigator.clipboard.writeText(customText);
+
+                btnText.textContent = 'copied';
+                status.textContent = '✓';
+                status.className = 'copy-status success';
+
+                setTimeout(() => {
+                    btnText.textContent = 'copy';
+                    status.textContent = 'ready';
+                    status.className = 'copy-status';
+                }, 1500);
+
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = customText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                btnText.textContent = 'copied';
+                status.textContent = '✓';
+                status.className = 'copy-status success';
+
+                setTimeout(() => {
+                    btnText.textContent = 'copy';
+                    status.textContent = 'ready';
+                    status.className = 'copy-status';
+                }, 1500);
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        document.getElementById('copyBtn').addEventListener('click', copyCustomText);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'c' && e.target === document.body) {
+                e.preventDefault();
+                copyCustomText();
+            }
+        });
+
+        console.log('✅ Copy Page Loaded');
+    </script>
+
+</body>
+</html>
+
+
