@@ -561,7 +561,6 @@
                             <div class="menu-section-label">Your account</div>
                             <a href="/profile"><i class="fas fa-user-circle"></i> Profile</a>
                             <a href="/my-orders"><i class="fas fa-box"></i> My Orders</a>
-                            <a href="/custom-order"><i class="fas fa-pencil-alt"></i> Custom Order</a>
                             <a href="/my-custom-orders"><i class="fas fa-list-ul"></i> My Custom Orders</a>
 
                             <!-- Seller links -->
@@ -586,6 +585,7 @@
                                 <a href="/admin/orders"><i class="fas fa-clipboard-list"></i> Order Management</a>
                                 <a href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a>
                                 <a href="/sales"><i class="fas fa-chart-bar"></i> Sales</a>
+                                <a href="/admin/categories"><i class="fas fa-tags"></i> Categories</a>
                                 <a href="/admin/stock-report"><i class="fas fa-boxes"></i> Stock Report</a>
                                 <a href="/admin/users"><i class="fas fa-users"></i> Users</a>
                             <% } %>
@@ -631,21 +631,17 @@
                 </li>
             </ul>
 
-            <label for="Categories" class="visually-hidden" style="position:absolute; left:-9999px;">Select a Category</label>
-            <select name="Categories" id="Categories" class="nav-category-select">
-                <option value="">Select a Category</option>
-                <option value="Shopping Bag's">Shopping Bag's</option>
-                <option value="Courier Poly">Courier Poly</option>
-                <option value="Sticker's">Sticker's</option>
-                <option value="Bouble Wrap">Bouble Wrap</option>
-                <option value="Card's">Card's</option>
-                <option value="Scotch Tape">Scotch Tape</option>
-                <optgroup label="Box's">
-                    <option value="1.Curtain Box">1.Curtain Box</option>
-                    <option value="2.Curtain premium Box">2.Curtain premium Box</option>
-                    <option value="3.Premium Box">3.Premium Box</option>
-                </optgroup>
-            </select>
+        <label for="Categories" class="visually-hidden" style="position:absolute; left:-9999px;">Select a Category</label>
+<select name="Categories" id="Categories" class="nav-category-select" onchange="if(this.value) window.location.href='/?category='+this.value">
+    <option value="">Select a Category</option>
+    <% if (typeof categories !== 'undefined' && categories.length > 0) { %>
+        <% categories.forEach(cat => { %>
+            <option value="<%= cat._id %>" <%= (typeof currentCategory !== 'undefined' && currentCategory === cat._id.toString()) ? 'selected' : '' %>>
+                <%= cat.name %>
+            </option>
+        <% }) %>
+    <% } %>
+</select>
         </div>
 
     </nav>

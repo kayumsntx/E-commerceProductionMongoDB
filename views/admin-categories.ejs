@@ -1,0 +1,75 @@
+<%- include('partials/header') %>
+<style>
+    .cat-container { max-width: 800px; margin: 20px auto; padding: 20px; background: white; border-radius: 10px; }
+    .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+    .cat-order-btn { cursor: pointer; background: #f0f0f0; border: 1px solid #ddd; border-radius: 5px; padding: 5px 10px; margin: 0 5px; }
+    .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    .input-group input { padding: 10px; flex: 1; border: 1px solid #ddd; border-radius: 5px; }
+    .input-group button { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+</style>
+
+<div class="cat-container">
+    <h2>Category Management</h2>
+    <div class="input-group">
+        <input type="text" id="newCatName" placeholder="Enter Category Name (e.g. Sticker's)">
+        <button onclick="addCategory()">+ Add Category</button>
+    </div>
+    <div id="catList"></div>
+</div>
+
+<script>
+    let categories = [];
+    async function loadCategories() {
+        const res = await fetch('/api/categories');
+        categories = await res.json();
+        renderCategories();
+    }
+    function renderCategories() {
+        const list = document.getElementById('catList');
+        list.innerHTML = '';
+        categories.forEach((cat, index) => {
+            const div = document.createElement('div');
+            div.className = 'cat-item';
+            div.innerHTML = `
+                <span>${cat.name}</span>
+                <div>
+                    <button class="cat-order-btn" onclick="moveCategory(${index}, 'up')">↑</button>
+                    <button class="cat-order-btn" onclick="moveCategory(${index}, 'down')">↓</button>
+                    <button class="cat-order-btn" onclick="deleteCategory('${cat._id}')">Delete</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+    async function addCategory() {
+        const name = document.getElementById('newCatName').value;
+        if(!name) return alert('Please enter a name');
+        await fetch('/api/admin/categories', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name })
+        });
+        document.getElementById('newCatName').value = '';
+        await loadCategories();
+    }
+    async function deleteCategory(id) {
+        if(confirm('Delete this category?')) {
+            await fetch('/api/admin/categories/' + id, { method: 'DELETE' });
+            await loadCategories();
+        }
+    }
+    async function moveCategory(index, direction) {
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= categories.length) return;
+        [categories[index], categories[newIndex]] = [categories[newIndex], categories[index]];
+        const orderedIds = categories.map(c => c._id);
+        await fetch('/api/admin/categories/reorder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ orderedIds })
+        });
+        renderCategories();
+    }
+    loadCategories();
+</script>
+<%- include('partials/footer') %>দ

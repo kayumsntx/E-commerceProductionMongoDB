@@ -18,6 +18,7 @@ const { v4: uuidv4 } = require("uuid");
 const QRCode = require('qrcode');
 const mongoose = require("mongoose");
 const steadfast = require("./steadfast");
+const Category = require("./models/Category");
 
 
 const app = express();
@@ -956,7 +957,18 @@ app.get("/logout", async (req, res) => {
 // ---------- HOME ----------
 app.get("/", async (req, res) => {
   try {
-    const products = await getAllProducts();
+    // 🔥 ক্যাটাগরি ফিল্টার লজিক
+    const { category } = req.query;
+
+    let products;
+    if (category && category !== 'all') {
+        products = await Product.find({ isActive: true, category: category });
+    } else {
+        products = await getAllProducts();
+    }
+
+    // 🔥 হেডার ড্রপডাউনের জন্য ক্যাটাগরি লোড
+    const categories = await Category.find().sort({ order: 1 });
 
     let cartCount = 0;
     if (req.session.user) {
@@ -987,7 +999,9 @@ app.get("/", async (req, res) => {
       offers: specialOffers,
       cartCount: cartCount,
       user: req.session.user || null,
-      isGuest: !req.session.user
+      isGuest: !req.session.user,
+      categories: categories,        // 🔥 ক্যাটাগরি পাঠানো হচ্ছে
+      currentCategory: category || null // 🔥 ড্রপডাউনে সিলেক্টেড রাখার জন্য
     });
   } catch (err) {
     console.error("Home error:", err);
@@ -1003,11 +1017,16 @@ app.get("/product/:productId", async (req, res) => {
         if (!product) {
             return res.status(404).send("Product not found");
         }
+
+        // 🔥 হেডারের জন্য ক্যাটাগরি লোড
+        const categories = await Category.find().sort({ order: 1 });
         
         res.render("product-details", {
             product: product,
             user: req.session.user || null,
-            isGuest: !req.session.user
+            isGuest: !req.session.user,
+            categories: categories, // 🔥 যোগ করা হয়েছে
+            currentCategory: null
         });
     } catch (err) {
         console.error("Product details error:", err);
@@ -1019,6 +1038,7 @@ app.get("/product/:productId", async (req, res) => {
 app.get("/cart", async (req, res) => {
   try {
     const products = await getAllProducts();
+    const categories = await Category.find().sort({ order: 1 }); // 🔥 যোগ করা হয়েছে
 
     let userCart = [];
     let cartTotal = 0;
@@ -1049,7 +1069,9 @@ app.get("/cart", async (req, res) => {
       cart: userCart,
       cartTotal: cartTotal.toFixed(2),
       user: req.session.user,
-      isGuest: !req.session.user
+      isGuest: !req.session.user,
+      categories: categories, // 🔥 যোগ করা হয়েছে
+      currentCategory: null
     });
   } catch (err) {
     console.error("Cart error:", err);
@@ -1061,6 +1083,7 @@ app.get("/cart", async (req, res) => {
 app.get("/my-orders", requireAuth, async (req, res) => {
   try {
     const userEmail = req.session.user.profile?.email || req.session.user.username;
+    const categories = await Category.find().sort({ order: 1 }); // 🔥 যোগ করা হয়েছে
     
     const userOrders = await Sale.find({
       $or: [
@@ -1082,7 +1105,9 @@ app.get("/my-orders", requireAuth, async (req, res) => {
       orderCount: totalOrders,
       totalAmount: totalAmount.toFixed(2),
       averageAmount: averageAmount,
-      pendingCount: pendingCount
+      pendingCount: pendingCount,
+      categories: categories, // 🔥 যোগ করা হয়েছে
+      currentCategory: null
     });
   } catch (err) {
     console.error("My orders error:", err);
@@ -1094,6 +1119,7 @@ app.get("/my-orders", requireAuth, async (req, res) => {
 app.get("/terminal", requireCashierOrAdmin, async (req, res) => {
   try {
     const products = await getAllProducts();
+    const categories = await Category.find().sort({ order: 1 }); // 🔥 যোগ করা হয়েছে
 
     let userCart = req.session.cart || [];
     
@@ -1114,7 +1140,9 @@ app.get("/terminal", requireCashierOrAdmin, async (req, res) => {
       products: products,
       cart: userCart,
       cartTotal: cartTotal.toFixed(2),
-      user: req.session.user
+      user: req.session.user,
+      categories: categories, // 🔥 যোগ করা হয়েছে
+      currentCategory: null
     });
   } catch (err) {
     console.error("Terminal error:", err);
@@ -1437,7 +1465,47 @@ app.get("/seller/custom-orders", requireSellerOrAdmin, (req, res) => {
         isGuest: false
     });
 });
+// ---------- CATEGORY APIs ----------
+app.get('/api/categories', async (req, res) => {
+    const categories = await Category.find().sort({ order: 1 });
+    res.json(categories);
+});
 
+app.post('/api/admin/categories', requireAdmin, async (req, res) => {
+    try {
+        const { name } = req.body;
+        const lastCat = await Category.findOne().sort({ order: -1 });
+        const newCat = new Category({
+            name,
+            order: lastCat ? lastCat.order + 1 : 1
+        });
+        await newCat.save();
+        res.status(201).json({ success: true, category: newCat });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/admin/categories/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { orderedIds } = req.body;
+        for (let i = 0; i < orderedIds.length; i++) {
+            await Category.findByIdAndUpdate(orderedIds[i], { order: i + 1 });
+        }
+        res.json({ success: true, message: "Categories reordered successfully!" });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/admin/categories/:id', requireAdmin, async (req, res) => {
+    try {
+        await Category.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
 
 // ---------- CART APIs ----------
 app.post("/api/cart/add", async (req, res) => {
@@ -2137,14 +2205,22 @@ app.get("/admin/inventory", requireAdmin, async (req, res) => {
   try {
     const products = await Product.find({});
     const sales = await Sale.find({});
+    
+    const categories = await Category.find().sort({ order: 1 });
+
     res.render("admin-inventory", {
       products: products,
       sales: sales,
+      categories: categories, 
     });
   } catch (err) {
     console.error("Inventory error:", err);
     res.status(500).send("Internal server error");
   }
+});
+// ----------- ADMIN CATEGORIES ----------
+app.get("/admin/categories", requireAdmin, (req, res) => {
+    res.render("admin-categories", { user: req.session.user, isGuest: false });
 });
 
 // ---------- PRODUCT CREATE (MULTIPLE IMAGES + VARIANTS) ----------
@@ -2195,6 +2271,55 @@ app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
     const computedTotal = totalStockFromVariants(variantArray);
     const stock = computedTotal !== null ? computedTotal : (parseInt(newProductStock) || 0);
 
+// ---------- PRODUCT CREATE (MULTIPLE IMAGES + VARIANTS) ----------
+app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
+  const { 
+    newProductName, 
+    newProductPrice, 
+    newProductStock,
+    colors,
+    sizes,
+    originalPrice,
+    variantsData,
+    category // 🔥 নতুন অংশ: ড্রপডাউন থেকে category ID নেওয়া
+  } = req.body;
+
+  try {
+    let mainImage = '/uploads/default.jpg';
+    let allImages = [];
+    
+    if (req.files && req.files.length > 0) {
+      mainImage = req.files[0].path;
+      allImages = req.files.map(file => file.path);
+    }
+    
+    const colorArray = colors ? colors.split(',').map(c => c.trim()).filter(c => c) : [];
+    const sizeArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s) : [];
+
+    // Per size+color stock grid sent from the admin form (JSON string).
+    // Falls back to the single "Stock Quantity" field when no grid was built
+    // (e.g. product has no colors/sizes at all).
+    let variantArray = [];
+    if (variantsData) {
+      try {
+        const parsed = JSON.parse(variantsData);
+        if (Array.isArray(parsed)) {
+          variantArray = parsed.map(v => ({
+            color: String(v.color || '').trim(),
+            size: String(v.size || '').trim(),
+            stock: Math.max(0, parseInt(v.stock) || 0),
+            price: Math.max(0, parseFloat(v.price) || 0),
+            originalPrice: Math.max(0, parseFloat(v.originalPrice) || 0)
+          }));
+        }
+      } catch (e) {
+        console.error("variantsData parse error:", e);
+      }
+    }
+
+    const computedTotal = totalStockFromVariants(variantArray);
+    const stock = computedTotal !== null ? computedTotal : (parseInt(newProductStock) || 0);
+
     const newProduct = new Product({
       id: "PROD-" + Date.now(),
       name: newProductName,
@@ -2206,7 +2331,8 @@ app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
       images: allImages,
       colors: colorArray,
       sizes: sizeArray,
-      variants: variantArray
+      variants: variantArray,
+      category: category || 'General' // 🔥 নতুন অংশ: category যুক্ত করা হয়েছে
     });
 
     await newProduct.save();
@@ -2228,7 +2354,8 @@ app.post("/product/update", requireAdmin, uploadMultiple, async (req, res) => {
     updateColors,
     updateSizes,
     updateOriginalPrice,
-    variantsData
+    variantsData,
+    updateCategory // 🔥 নতুন অংশ: এডিট ফর্ম থেকে category আপডেট নেওয়া
   } = req.body;
 
   try {
@@ -2261,7 +2388,8 @@ app.post("/product/update", requireAdmin, uploadMultiple, async (req, res) => {
       stockStatus: computeStockStatus(stock),
       colors: updateColors ? updateColors.split(',').map(c => c.trim()).filter(c => c) : [],
       sizes: updateSizes ? updateSizes.split(',').map(s => s.trim()).filter(s => s) : [],
-      variants: variantArray
+      variants: variantArray,
+      category: updateCategory || 'General' // 🔥 নতুন অংশ: category আপডেট যুক্ত করা হয়েছে
     };
 
     if (req.files && req.files.length > 0) {
@@ -2317,13 +2445,15 @@ app.get("/api/product/:productId", requireAdmin, async (req, res) => {
             imagePath: product.imagePath,
             images: product.images || [],
             colors: product.colors || [],
-            sizes: product.sizes || []
+            sizes: product.sizes || [],
+            category: product.category || '' // 🔥 নতুন অংশ: ক্যাটাগরি ID রিসপন্সে পাঠানো হচ্ছে
         });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
+// ---------- PRODUCT DELETE (অপরিবর্তিত) ----------
 app.post("/product/delete", requireAdmin, async (req, res) => {
   const { productId } = req.body;
 
