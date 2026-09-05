@@ -2232,54 +2232,6 @@ app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
     colors,
     sizes,
     originalPrice,
-    variantsData
-  } = req.body;
-
-  try {
-    let mainImage = '/uploads/default.jpg';
-    let allImages = [];
-    
-    if (req.files && req.files.length > 0) {
-      mainImage = req.files[0].path;
-      allImages = req.files.map(file => file.path);
-    }
-    
-    const colorArray = colors ? colors.split(',').map(c => c.trim()).filter(c => c) : [];
-    const sizeArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s) : [];
-
-    // Per size+color stock grid sent from the admin form (JSON string).
-    // Falls back to the single "Stock Quantity" field when no grid was built
-    // (e.g. product has no colors/sizes at all).
-    let variantArray = [];
-    if (variantsData) {
-      try {
-        const parsed = JSON.parse(variantsData);
-        if (Array.isArray(parsed)) {
-          variantArray = parsed.map(v => ({
-            color: String(v.color || '').trim(),
-            size: String(v.size || '').trim(),
-            stock: Math.max(0, parseInt(v.stock) || 0),
-            price: Math.max(0, parseFloat(v.price) || 0),
-            originalPrice: Math.max(0, parseFloat(v.originalPrice) || 0)
-          }));
-        }
-      } catch (e) {
-        console.error("variantsData parse error:", e);
-      }
-    }
-
-    const computedTotal = totalStockFromVariants(variantArray);
-    const stock = computedTotal !== null ? computedTotal : (parseInt(newProductStock) || 0);
-
-// ---------- PRODUCT CREATE (MULTIPLE IMAGES + VARIANTS) ----------
-app.post("/product/create", requireAdmin, uploadMultiple, async (req, res) => {
-  const { 
-    newProductName, 
-    newProductPrice, 
-    newProductStock,
-    colors,
-    sizes,
-    originalPrice,
     variantsData,
     category // 🔥 নতুন অংশ: ড্রপডাউন থেকে category ID নেওয়া
   } = req.body;
@@ -3111,4 +3063,4 @@ wss.on("connection", (socket, req) => {
 
 server.listen(PORT, () =>
   console.log("BAGNEST online at http://localhost:" + PORT)
-);
+  );
