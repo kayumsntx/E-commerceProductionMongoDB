@@ -516,6 +516,29 @@
                 text-overflow: ellipsis;
             }
         }
+            /* ============ Site-wide mobile safety net ============ */
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    html, body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    img, svg, video {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* iOS Safari-তে ফর্মের ইনপুটে ট্যাপ করলে যে অটো-জুম হয়ে যায় (১৬px এর
+       কম ফন্ট সাইজ হলে এটা হয়) সেটা বন্ধ করার জন্য — শুধু মোবাইলে প্রযোজ্য */
+    @media (max-width: 768px) {
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+    }
+
     </style>
 </head>
 

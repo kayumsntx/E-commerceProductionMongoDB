@@ -270,6 +270,20 @@
             padding: 30px 15px 0 15px;
         }
     }
+        @media (max-width: 480px) {
+        #chat-window-desk {
+            width: calc(100vw - 20px) !important;
+            right: 10px !important;
+            left: 10px !important;
+            height: 60vh !important;
+            bottom: 70px !important;
+        }
+
+        #chat-toggle-btn {
+            right: 10px !important;
+            bottom: max(15px, env(safe-area-inset-bottom)) !important;
+        }
+    }
 </style>
 
 
