@@ -471,6 +471,76 @@
             gap: 16px;
         }
     }
+
+    /* ============ Mobile Responsive Fixes (Home) ============ */
+@media (max-width: 768px) {
+    /* লাইভ চ্যাট বাটনের জন্য নিচে স্পেস */
+    body {
+        padding-bottom: 80px;
+    }
+
+    /* সেকশন টাইটেল যেন কাটা না পড়ে */
+    .section-title {
+        font-size: 1.2rem;
+        word-break: break-word;
+    }
+
+    .full-page-container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    /* প্রোডাক্ট গ্রিড ২ কলামে */
+    .home-catalog-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px;
+    }
+
+    .home-card img {
+        height: 140px;
+    }
+
+    /* ক্যাটাগরি কারousel ছোট ও মসৃণ */
+    .category-carousel {
+        gap: 10px;
+        padding: 10px 5px;
+    }
+
+    .category-card {
+        min-width: 80px;
+    }
+
+    .cat-circle {
+        width: 80px;
+        height: 80px;
+    }
+
+    .category-card span {
+        font-size: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 80px;
+        display: block;
+    }
+
+    /* কার্ট বাটন ছোট করা */
+    .cart-controls {
+        gap: 8px;
+        padding-top: 8px;
+    }
+
+    .cart-controls .qty-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+
+    .cart-controls .qty-display {
+        font-size: 0.9rem;
+        padding: 2px 6px;
+    }
+}
     }
 </style>
 

@@ -542,6 +542,61 @@
         max-width: 100%;
         overflow-x: hidden;
     }
+
+
+    /* ============ Site-wide mobile safety net ============ */
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+img, svg, video {
+    max-width: 100%;
+    height: auto;
+}
+
+/* মোবাইলে ইনপুট জুম ঠেকাতে */
+@media (max-width: 768px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+
+    /* হেডার লেআউট মোবাইলে একদম সোজা */
+    .navbar-row-top {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .header-search-box {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .navbar-actions {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+
+    /* ক্যাটাগরি ড্রপডাউন মোবাইলে ফুল উইডথ */
+    .nav-category-select {
+        width: 100%;
+        margin-top: 5px;
+    }
+
+    .navbar-row-bottom {
+        flex-direction: column;
+        align-items: center;
+        row-gap: 6px;
+    }
+
+    /* গেস্ট কার্ট ব্যানার ছোট করা */
+    .guest-cart-banner {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+}
     }
 
     </style>
