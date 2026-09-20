@@ -92,10 +92,54 @@
 </div>
 
 <script>
-    // ✅ বর্তমানে লগইন করা সেলারের ID (EJS থেকে)
+
     const currentSellerId = '<%= user.id %>';
 
-    async function loadOrders() {
+  async function loadOrders() {
+    try {
+        const res = await fetch('/api/custom-orders', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin' 
+        });
+
+        
+        console.log('📡 API Response Status:', res.status);
+
+      
+        if (res.redirected) {
+            console.error('❌ Redirected to:', res.url);
+            throw new Error('Session expired or not authorized. Please login again.');
+        }
+
+      
+        const rawText = await res.text();
+        console.log('📄 Raw Response:', rawText.substring(0, 200));
+
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (parseErr) {
+            console.error('❌ JSON Parse Error. Response was:', rawText);
+            throw new Error('Server did not return JSON. Status: ' + res.status);
+        }
+
+        if (data.success) {
+            renderOrders(data.orders);
+        } else {
+            throw new Error(data.message || 'Unknown error');
+        }
+    } catch (err) {
+        console.error('❌ Load Orders Error:', err);
+        document.getElementById('ordersList').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-circle" style="color:#e53e3e;"></i>
+                <h3>Failed to load orders</h3>
+                <p>${err.message}</p>
+                <p style="font-size:0.75rem; color:#a0aec0; margin-top:10px;">Check browser console (F12) for details.</p>
+            </div>`;
+    }
+}
         try {
             const res = await fetch('/api/custom-orders');
             const data = await res.json();
@@ -111,7 +155,7 @@
                     <p>Please refresh the page or try again later.</p>
                 </div>`;
         }
-    }
+    
 
     function renderOrders(orders) {
         const container = document.getElementById('ordersList');
