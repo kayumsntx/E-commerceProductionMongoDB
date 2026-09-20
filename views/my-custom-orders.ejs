@@ -113,7 +113,9 @@
                     </div>
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                         <!-- ✅ ২৪ ঘণ্টার কাউন্টডাউন টাইমার -->
-                        <div class="timer-badge" data-created-at="<%= new Date(order.createdAt).getTime() %>" data-order-status="<%= order.status %>">
+                      <div class="timer-badge" 
+     data-start-time="<%= order.status === 'approved' ? new Date(order.updatedAt).getTime() : new Date(order.createdAt).getTime() %>" 
+     data-order-status="<%= order.status %>">
                             <i class="fas fa-clock"></i> <span class="timer-value">--:--:--</span>
                         </div>
                         <span class="status-badge status-<%= order.status %>">
@@ -232,6 +234,52 @@
     // সময় শেষ হলে লাল রঙে "Bidding Closed" দেখানো হয়।
 
     document.querySelectorAll('.timer-badge').forEach(function (badge) {
+    const startTime = parseInt(badge.getAttribute('data-start-time'), 10);
+    const orderStatus = badge.getAttribute('data-order-status');
+
+    // ✅ যে স্ট্যাটাসে টাইমার দেখানোর দরকার নেই
+    if (orderStatus === 'rejected' || orderStatus === 'assigned' || orderStatus === 'completed') {
+        badge.style.display = 'none';
+        return;
+    }
+
+    // ✅ Pending (অ্যাডমিন অ্যাপ্রুভের অপেক্ষায়) — টাইমার লুকানো
+    if (orderStatus === 'pending') {
+        badge.style.display = 'none';
+        return;
+    }
+
+    // ✅ Approved — এখানেই ২৪ ঘণ্টার কাউন্টডাউন চলবে
+    const deadline = startTime + (24 * 60 * 60 * 1000);
+
+    function updateTimer() {
+        const now = Date.now();
+        const remaining = deadline - now;
+
+        if (remaining <= 0) {
+            badge.className = 'timer-badge bidding-closed';
+            badge.querySelector('.timer-value').textContent = 'Bidding Closed';
+            clearInterval(timerInterval);
+            return;
+        }
+
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+        const formatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        badge.querySelector('.timer-value').textContent = formatted;
+
+        if (remaining <= 6 * 60 * 60 * 1000) {
+            badge.className = 'timer-badge bidding-closing';
+        } else {
+            badge.className = 'timer-badge bidding-open';
+        }
+    }
+
+    updateTimer();
+    const timerInterval = setInterval(updateTimer, 1000);
+});
         const createdAt = parseInt(badge.getAttribute('data-created-at'), 10);
         const orderStatus = badge.getAttribute('data-order-status');
 
