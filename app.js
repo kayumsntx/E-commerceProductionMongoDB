@@ -1199,7 +1199,7 @@ const CustomOrder = mongoose.model("CustomOrder", customOrderSchema);
 // ==========================================
 // CUSTOM ORDER - CREATE PAGE (Customer)
 // ==========================================
-app.get("/custom-orders", requireAuth, (req, res) => {
+app.get("/my-custom-orders", requireAuth, (req, res) => {
     res.render("custom-order", {
         user: req.session.user,
         isGuest: false
@@ -1262,7 +1262,7 @@ app.post("/api/custom-order/create", requireAuth, uploadOrderImages, async (req,
 });
 
 // ---------- GET ALL CUSTOM ORDERS (Admin/Seller) ----------
-app.get("/api/custom-orders", requireAuth, async (req, res) => {
+app.get("/api/my-custom-orders", requireAuth, async (req, res) => {
     try {
         const user = req.session.user;
         let filter = {};
@@ -1456,7 +1456,7 @@ app.get("/my-custom-orders", requireAuth, async (req, res) => {
 });
 
 // ---------- ADMIN CUSTOM ORDER MANAGEMENT ----------
-app.get("/admin/custom-orders", requireAdmin, (req, res) => {
+app.get("/admin/my-custom-orders", requireAdmin, (req, res) => {
     res.render("admin-custom-orders", {
         user: req.session.user,
         isGuest: false
@@ -1464,7 +1464,7 @@ app.get("/admin/custom-orders", requireAdmin, (req, res) => {
 });
 
 // ---------- SELLER DASHBOARD (Bid on orders) ----------
-app.get("/seller/custom-orders", requireSellerOrAdmin, (req, res) => {
+app.get("/seller/my-custom-orders", requireSellerOrAdmin, (req, res) => {
     res.render("seller-custom-orders", {
         user: req.session.user,
         isGuest: false
