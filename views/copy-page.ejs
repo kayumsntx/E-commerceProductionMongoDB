@@ -465,7 +465,7 @@ namespace ASP_Net_Core_CRUD_Evd.Controllers
 
 FILE: Views/_ViewImports.cshtml
 
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelper
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @using ASP_Net_Core_CRUD_Evd.Models
 @using ASP_Net_Core_CRUD_Evd.Models.ViewModels
 
@@ -484,6 +484,7 @@ FILE: Views/Shared/_Layout.cshtml
 <head>
     <meta name="viewport" content="width=device-width" />
     <title>@ViewBag.Title</title>
+
     <link href="~/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
 </head>
 <body>
@@ -500,7 +501,6 @@ FILE: Views/Shared/_Layout.cshtml
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
-
 
 FILE: Views/Shared/_skillModules.cshtml
 
@@ -538,15 +538,12 @@ FILE: Views/Shared/_skillModules.cshtml
 
 FILE: Views/Employees/Index.cshtml
 
-@using ASP_Net_Core_CRUD_Evd.Models
 @model IEnumerable<Employee>
 <p class="mt-3 mb-2">
-    <h4>Employee-Skills Info</h4>
+    <h4>Employee Skill Info</h4>
 </p>
-<p>
-    <a href="@Url.Action("Create", "Employees")" class="btn btn-primary">Add New Employees</a>
-</p>
-<h4>Employee list</h4>
+
+<h3>Employee List</h3>
 <table class="table table-bordered table-striped">
     <thead>
         <tr>
@@ -554,10 +551,12 @@ FILE: Views/Employees/Index.cshtml
             <th>Employee Name</th>
             <th>Mobile No</th>
             <th>Skill Name</th>
-            <th>Join Date</th>
+            <th>
+                Join Date
+            </th>
             <th>Active?</th>
             <th>Modules</th>
-            <th>Actions</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
@@ -567,11 +566,11 @@ FILE: Views/Employees/Index.cshtml
                 <td>
                     @if (!string.IsNullOrEmpty(item.ImageUrl))
                     {
-                        <img src="@Url.Content("~/images/" + item.ImageUrl)" width=80 />
+                        <img src="@Url.Content("~/images/" + item.ImageUrl)" width="100px" />
                     }
                     else
                     {
-                        <img src="@Url.Content("~/images/noimage.png")" width=80 />
+                        <img src="@Url.Content("/images/noimage.png")" width="100" />
                     }
                 </td>
                 <td>@item.EmployeeName</td>
@@ -597,6 +596,9 @@ FILE: Views/Employees/Index.cshtml
         }
     </tbody>
 </table>
+<p>
+    <a href="@Url.Action("Create", "Employees")" class="btn btn-primary">Create</a>
+</p>
 
 
 FILE: Views/Employees/Create.cshtml
@@ -665,6 +667,7 @@ FILE: Views/Employees/Create.cshtml
                     </div>
 
                     <div class="form-group mt-4">
+
                         <button type="submit" class="btn btn-success">Create</button>
                         <a asp-action="Index" class="btn btn-dark">Cancel</a>
                     </div>
@@ -683,6 +686,68 @@ FILE: Views/Employees/Create.cshtml
         </form>
     </div>
 </div>
+
+
+<script>
+
+    function showImagePreview(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('imgPreview').src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+
+    function AddModule() {
+        const tbody = document.querySelector('#modulesTable tbody');
+        if (!tbody) return;
+
+        const index = tbody.rows.length;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <input type="hidden" name="SkillModules[${index}].SkillModuleId" value="0" />
+                <input type="text" name="SkillModules[${index}].ModuleName" class="form-control" required />
+            </td>
+            <td>
+                <input type="number" min="1" name="SkillModules[${index}].Duration" class="form-control" required />
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-danger btn-sm removeModuleBtn">Remove</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+
+
+    document.addEventListener('click', function (e) {
+        if (e.target && e.target.classList.contains('removeModuleBtn')) {
+            const row = e.target.closest('tr');
+            if (row) {
+                row.remove();
+                reIndexTableRows();
+            }
+        }
+    });
+
+    function reIndexTableRows() {
+        const rows = document.querySelectorAll('#modulesTable tbody tr');
+        rows.forEach((row, rowIndex) => {
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                const currentName = input.getAttribute('name');
+                if (currentName) {
+                    const newName = currentName.replace(/\[\d+\]/, `[${rowIndex}]`);
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+    }
+</script>
+
 
 
 FILE: Views/Employees/Edit.cshtml
