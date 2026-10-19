@@ -88,823 +88,445 @@
     <textarea id="copySource" readonly>
 
 
-DB 
+ng new employee-training --skip-git --skip-tests
+cd, code .
+npm i bootstrap
+npm i bootstrap angular.json → styles  Bootstrap path
+app.config.ts - provideRouter(routes, withComponentInputBinding()),
 
-CREATE DATABASE CoreEvdDb;
-GO
+ng g c components/employees.components
 
-USE CoreEvdDb;
-GO
+app.routes.ts:
 
-CREATE TABLE Skill
-(
-    SkillId INT NOT NULL PRIMARY KEY IDENTITY(201, 1),
-    SkillName VARCHAR(10) NOT NULL
-);
-GO
+export const routes: Routes = [
+  { path: '', redirectTo: 'employees', pathMatch: 'full' },
+  { path: 'employees', component: EmployeesComponets },
+  { path: '**', redirectTo: 'employees' },
+];
 
-CREATE TABLE Employee
-(
-    EmployeeId INT NOT NULL PRIMARY KEY IDENTITY(1, 1),
-    EmployeeName VARCHAR(20) NOT NULL,
-    JoinDate DATETIME NOT NULL,
-    IsActive BIT NOT NULL,
-    MobileNo CHAR(11) NOT NULL,
-    SkillId INT NOT NULL REFERENCES Skill(SkillId) ON DELETE CASCADE,
-    SkillBudget DECIMAL(18, 2) NOT NULL,
-    ImageUrl VARCHAR(200) NULL
-);
-GO
 
-CREATE TABLE SkillModule
-(
-    SkillModuleId INT NOT NULL PRIMARY KEY IDENTITY(101, 1),
-    ModuleName VARCHAR(10) NOT NULL,
-    Duration INT NOT NULL,
-    EmployeeId INT NOT NULL REFERENCES Employee(EmployeeId) ON DELETE CASCADE
-);
-GO
+app.ts RouterOutlet import, app.html  <router-outlet />
+ app.html:
 
-Scaffold
+<div class="container">
 
-Scaffold-DbContext "Server=(LocalDB)\MSSQLLocalDB; Database=coreEvdDB; Trusted_Connection=True; TrustServerCertificate=True; Encrypt=False; MultipleActiveResultSets=True" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
-
-
-FILE: appsettings.json
-
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "AllowedHosts": "*",
-  "ConnectionStrings": {
-    "con": "Server=(LocalDB)\\MSSQLLocalDB; database=coreEvdDB; Trusted_Connection=true; MultipleActiveResultSets=true; TrustServerCertificate=true"
-  }
-}
-
-
-FILE: Program.cs
-
-
-using ASP_Net_Core_CRUD_Evd.Models;
-using Microsoft.EntityFrameworkCore;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddControllersWithViews();
-builder.Services.AddDbContext<CoreEvdDbContext>(op => op.UseSqlServer(builder.Configuration.GetConnectionString("con")));
-
-var app = builder.Build();
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-app.UseStaticFiles();
-app.UseRouting();
-
-app.MapControllerRoute(name: "custom", pattern: "{controller=Employees}/{action=Index}/{id?}");
-app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-
-app.Run();
-
-
-FILE: Models/ViewModels/EmployeeViewModel.cs
-
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using System.ComponentModel.DataAnnotations;
-
-namespace ASP_Net_Core_CRUD_Evd.Models.ViewModels
-{
-    public class EmployeeViewModel
-    {
-        public int EmployeeId { get; set; }
-
-        [Required(ErrorMessage = "Employee name is required.")]
-        [Display(Name = "Employee Name")]
-        public string EmployeeName { get; set; } = null!;
-
-        [Display(Name = "Join Date")]
-        [DataType(DataType.Date)]
-        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
-        public DateTime JoinDate { get; set; } = DateTime.Now;
-
-        [Display(Name = "Mobile No:")]
-        [StringLength(11, MinimumLength = 11, ErrorMessage = "Mobile number must be 11 digits.")]
-        public string MobileNo { get; set; } = null!;
-
-        [ValidateNever]
-        public string ImageUrl { get; set; } = null!;
-        public bool IsActive { get; set; }
-
-        [Display(Name = "Skill List")]
-        [Required(ErrorMessage = "Please select a skill")]
-        public int SkillId { get; set; }
-
-        [Display(Name = "Skill Budget")]
-        public decimal SkillBudget { get; set; }
-
-        [ValidateNever]
-        public virtual Skill Skill { get; set; } = null!;
-
-        [ValidateNever]
-        public List<Skill>? Skills { get; set; }
-
-        [ValidateNever]
-        public IFormFile? ProfileFile { get; set; }
-
-        [ValidateNever]
-        public IList<SkillModule> SkillModules { get; set; } = new List<SkillModule>();
-    }
-}
-
-
-FILE: Controllers/HomeController.cs
-
-using Microsoft.AspNetCore.Mvc;
-
-namespace ASP_Net_Core_CRUD_Evd.Controllers
-{
-    public class HomeController : Controller
-    {
-        public IActionResult Index()
-        {
-            return View();
-        }
-    }
-}
-
-
-FILE: Controllers/EmployeesController.cs
-
-using ASP_Net_Core_CRUD_Evd.Models;
-using ASP_Net_Core_CRUD_Evd.Models.ViewModels;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace ASP_Net_Core_CRUD_Evd.Controllers
-{
-    public class EmployeesController : Controller
-    {
-        private readonly CoreEvdDbContext _db;
-        private readonly IWebHostEnvironment _env;
-
-        public EmployeesController(CoreEvdDbContext db, IWebHostEnvironment env)
-        {
-            _db = db;
-            _env = env;
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Index()
-        {
-            var employees = await _db.Employees
-                                     .Include(s => s.Skill)
-                                     .Include(m => m.SkillModules)
-                                     .ToListAsync();
-            return View(employees);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Create()
-        {
-            var viewModel = new EmployeeViewModel
-            {
-                Skills = await _db.Skills.ToListAsync()
-            };
-            return View(viewModel);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(EmployeeViewModel model)
-        {
-            if (ModelState.IsValid)
-            {
-                string imageName = await GetImageName(model.ProfileFile);
-
-                var skillModuleTable = new DataTable();
-                skillModuleTable.Columns.Add("ModuleName", typeof(string));
-                skillModuleTable.Columns.Add("Duration", typeof(int));
-
-                if (model.SkillModules != null && model.SkillModules.Any())
-                {
-                    foreach (var mod in model.SkillModules)
-                    {
-                        skillModuleTable.Rows.Add(mod.ModuleName, mod.Duration);
-                    }
-                }
-
-                var parameters = new[]
-                {
-                    new SqlParameter("@EmployeeName", SqlDbType.NVarChar) { Value = (object)model.EmployeeName ?? DBNull.Value },
-                    new SqlParameter("@JoinDate", SqlDbType.DateTime) { Value = model.JoinDate },
-                    new SqlParameter("@MobileNo", SqlDbType.VarChar) { Value = (object)model.MobileNo ?? DBNull.Value },
-                    new SqlParameter("@IsActive", SqlDbType.Bit) { Value = model.IsActive },
-                    new SqlParameter("@SkillId", SqlDbType.Int) { Value = model.SkillId },
-                    new SqlParameter("@ImageUrl", SqlDbType.NVarChar) { Value = (object)imageName ?? DBNull.Value },
-                    new SqlParameter("@SkillBudget", SqlDbType.Decimal) { Value = model.SkillBudget },
-                    new SqlParameter("@SkillModules", SqlDbType.Structured) { Value = skillModuleTable, TypeName = "dbo.ParamModuleType" }
-                };
-
-                await _db.Database.ExecuteSqlRawAsync(
-                    "EXEC dbo.InsertEmployeeSP @EmployeeName, @JoinDate, @MobileNo, @IsActive, @SkillId, @ImageUrl, @SkillBudget, @SkillModules",
-                    parameters
-                );
-
-                return RedirectToAction(nameof(Index));
-            }
-
-            model.Skills = await _db.Skills.ToListAsync();
-            return View(model);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Edit(int id)
-        {
-            var employee = await _db.Employees
-                                    .Include(e => e.SkillModules)
-                                    .FirstOrDefaultAsync(e => e.EmployeeId == id);
-
-            if (employee == null) return NotFound();
-
-            var viewModel = new EmployeeViewModel
-            {
-                EmployeeId = employee.EmployeeId,
-                EmployeeName = employee.EmployeeName,
-                JoinDate = employee.JoinDate,
-                ImageUrl = employee.ImageUrl,
-                SkillId = employee.SkillId,
-                MobileNo = employee.MobileNo,
-                IsActive = employee.IsActive,
-                SkillBudget = employee.SkillBudget,
-                SkillModules = employee.SkillModules?.ToList() ?? new List<SkillModule>(),
-                Skills = await _db.Skills.ToListAsync()
-            };
-
-            return View(viewModel);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(EmployeeViewModel model, string? OldImageUrl)
-        {
-            if (!ModelState.IsValid)
-            {
-                model.Skills = await _db.Skills.ToListAsync();
-                return View(model);
-            }
-
-            var existingEmployee = await _db.Employees
-                                            .Include(e => e.SkillModules)
-                                            .FirstOrDefaultAsync(e => e.EmployeeId == model.EmployeeId);
-
-            if (existingEmployee == null) return NotFound();
-
-            if (model.ProfileFile != null && model.ProfileFile.Length > 0)
-            {
-                string imageName = await GetImageName(model.ProfileFile);
-
-                if (!string.IsNullOrEmpty(OldImageUrl))
-                {
-                    string oldPath = Path.Combine(_env.WebRootPath, "images", Path.GetFileName(OldImageUrl));
-                    if (System.IO.File.Exists(oldPath))
-                    {
-                        System.IO.File.Delete(oldPath);
-                    }
-                }
-                existingEmployee.ImageUrl = imageName;
-            }
-            else
-            {
-                existingEmployee.ImageUrl = OldImageUrl ?? existingEmployee.ImageUrl;
-            }
-
-            existingEmployee.EmployeeName = model.EmployeeName;
-            existingEmployee.JoinDate = model.JoinDate;
-            existingEmployee.MobileNo = model.MobileNo;
-            existingEmployee.IsActive = model.IsActive;
-            existingEmployee.SkillId = model.SkillId;
-            existingEmployee.SkillBudget = model.SkillBudget;
-
-            _db.SkillModules.RemoveRange(existingEmployee.SkillModules);
-
-            if (model.SkillModules != null && model.SkillModules.Any())
-            {
-                foreach (var mod in model.SkillModules)
-                {
-                    existingEmployee.SkillModules.Add(new SkillModule
-                    {
-                        ModuleName = mod.ModuleName,
-                        Duration = mod.Duration,
-                        EmployeeId = existingEmployee.EmployeeId
-                    });
-                }
-            }
-
-            await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        public async Task<IActionResult> Delete(int id)
-        {
-            var emp = await _db.Employees
-                               .Include(e => e.SkillModules)
-                               .FirstOrDefaultAsync(e => e.EmployeeId == id);
-
-            if (emp == null) return NotFound();
-
-            if (!string.IsNullOrEmpty(emp.ImageUrl))
-            {
-                string imagePath = Path.Combine(_env.WebRootPath, "images", emp.ImageUrl);
-                if (System.IO.File.Exists(imagePath))
-                {
-                    System.IO.File.Delete(imagePath);
-                }
-            }
-
-            _db.Employees.Remove(emp);
-            await _db.SaveChangesAsync();
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        private async Task<string> GetImageName(IFormFile? profileFile)
-        {
-            if (profileFile == null || profileFile.Length == 0) return string.Empty;
-
-            string uploadFolder = Path.Combine(_env.WebRootPath, "images");
-
-            if (!Directory.Exists(uploadFolder))
-            {
-                Directory.CreateDirectory(uploadFolder);
-            }
-
-            string imageName = Guid.NewGuid().ToString() + Path.GetExtension(profileFile.FileName);
-            string filePath = Path.Combine(uploadFolder, imageName);
-
-            await using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await profileFile.CopyToAsync(fileStream);
-            }
-
-            return imageName;
-        }
-    }
-}
-
-
-FILE: Views/_ViewImports.cshtml
-
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
-@using ASP_Net_Core_CRUD_Evd.Models
-@using ASP_Net_Core_CRUD_Evd.Models.ViewModels
-
-
-FILE: Views/_ViewStart.cshtml
-
-@{
-    Layout = "_Layout";
-}
-
-
-FILE: Views/Shared/_Layout.cshtml
-
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>@ViewBag.Title</title>
-
-    <link href="~/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
-</head>
-<body>
-    <div class="container">
-        <ul>
-            <li><a class="nav-link" asp-area="" asp-action="Index" asp-controller="Employees">Employee List</a></li>
-            <li><a class="nav-link" asp-area="" asp-action="Create" asp-controller="Employees">New Employee</a></li>
-        </ul>
-        @RenderBody()
-    </div>
-
-    <script src="~/jquery/jquery.min.js"></script>
-    <script src="~/bootstrap/js/bootstrap.min.js"></script>
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
-</html>
-
-FILE: Views/Shared/_skillModules.cshtml
-
-@model List<SkillModule>
-<table class="table table-bordered" id="modulesTable">
-    <thead>
-        <tr>
-            <th>Module Name</th>
-            <th>Duration</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (Model != null && Model.Count > 0)
-        {
-            for (int i = 0; i < Model.Count; i++)
-            {
-                <tr>
-                    <td>
-                        <input type="hidden" name="SkillModules[@i].SkillModuleId" value="0" />
-                        <input name="SkillModules[@(i)].ModuleName" value="@Model[i].ModuleName" class="form-control" />
-                    </td>
-                    <td>
-                        <input name="SkillModules[@(i)].Duration" value="@Model[i].Duration" class="form-control" />
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-danger removeModuleBtn">Remove</button>
-                    </td>
-                </tr>
-            }
-        }
-    </tbody>
-</table>
-
-
-FILE: Views/Employees/Index.cshtml
-
-@model IEnumerable<Employee>
-<p class="mt-3 mb-2">
-    <h4>Employee Skill Info</h4>
-</p>
-
-<h3>Employee List</h3>
-<table class="table table-bordered table-striped">
-    <thead>
-        <tr>
-            <th>Image</th>
-            <th>Employee Name</th>
-            <th>Mobile No</th>
-            <th>Skill Name</th>
-            <th>
-                Join Date
-            </th>
-            <th>Active?</th>
-            <th>Modules</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>
-                    @if (!string.IsNullOrEmpty(item.ImageUrl))
-                    {
-                        <img src="@Url.Content("~/images/" + item.ImageUrl)" width="100px" />
-                    }
-                    else
-                    {
-                        <img src="@Url.Content("/images/noimage.png")" width="100" />
-                    }
-                </td>
-                <td>@item.EmployeeName</td>
-                <td>@item.MobileNo</td>
-                <td>@item.Skill.SkillName</td>
-                <td>@item.JoinDate.ToShortDateString()</td>
-                <td>@(item.IsActive ? "Active" : "Not Active")</td>
-                <td>
-                    @foreach (var m in item.SkillModules)
-                    {
-                        <ul>
-                            <li>@m.ModuleName - @m.Duration</li>
-                        </ul>
-                    }
-                </td>
-                <td>
-                    <a href="@Url.Action("Edit", "Employees", new { id = item.EmployeeId })" class="btn btn-primary">Edit</a>
-                    <form method="post" action="@Url.Action("Delete", "Employees", new { id = item.EmployeeId })" onsubmit="return confirm('Are you sure to delete this record?')">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                    </form>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
-<p>
-    <a href="@Url.Action("Create", "Employees")" class="btn btn-primary">Create</a>
-</p>
-
-
-FILE: Views/Employees/Create.cshtml
-
-@model EmployeeViewModel
-
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">Create New Employee</h5>
-    </div>
-    <div class="card-body">
-        <form asp-action="Create" method="post" enctype="multipart/form-data">
-            <div class="row">
-                <div class="col-md-7">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="EmployeeName" class="control-label"></label>
-                        <input asp-for="EmployeeName" class="form-control" />
-                        <span asp-validation-for="EmployeeName" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="JoinDate" class="control-label"></label>
-                        <input asp-for="JoinDate" type="date" class="form-control" />
-                        <span asp-validation-for="JoinDate" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="MobileNo" class="control-label"></label>
-                        <input asp-for="MobileNo" class="form-control" />
-                        <span asp-validation-for="MobileNo" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="SkillId" class="control-label"></label>
-                        <select class="form-select" asp-for="SkillId" asp-items="@(new SelectList(Model.Skills, "SkillId", "SkillName"))">
-                            <option value="">Select Skill</option>
-                        </select>
-                        <span asp-validation-for="SkillId" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="SkillBudget" class="control-label"></label>
-                        <input asp-for="SkillBudget" class="form-control" />
-                        <span asp-validation-for="SkillBudget" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group form-check mt-3">
-                        <label class="form-check-label">
-                            <input class="form-check-input" asp-for="IsActive" />
-                            @Html.DisplayNameFor(model => model.IsActive)
-                        </label>
-                    </div>
-
-                    <div class="form-group mt-3">
-                        <div class="row align-items-center">
-                            <div class="col-sm-4">
-                                <img id="imgPreview" src="~/images/noimage.png" class="img-thumbnail" style="width: 90px; height: 90px; object-fit: cover;" onerror="this.src='/images/noimage.png';" />
-                                <label for="img" class="form-label fw-bold d-block mt-1">Upload Picture</label>
-                            </div>
-                            <div class="col-sm-8">
-                                <input style="display: none" id="img" name="ProfileFile" type="file" class="form-control" accept="image/*" onchange="showImagePreview(this)" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group mt-4">
-
-                        <button type="submit" class="btn btn-success">Create</button>
-                        <a asp-action="Index" class="btn btn-dark">Cancel</a>
-                    </div>
-                </div>
-
-                <div class="col-md-5">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0">Skill Modules</h6>
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="AddModule()">+ Add Module</button>
-                    </div>
-                    <div id="ModuleTableContainer">
-                        @await Html.PartialAsync("_skillModules", Model.SkillModules ?? new List<SkillModule>())
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
+  <h1>EmployeeSkill</h1>
+  <router-outlet />
 </div>
 
 
-<script>
-
-    function showImagePreview(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('imgPreview').src = e.target.result;
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
+models/: employee, training, training-record, training-dto
+ng g i models/employee
+ng g i models/training
+ng g i models/training-record
+ng g i models/training-dto
 
 
-    function AddModule() {
-        const tbody = document.querySelector('#modulesTable tbody');
-        if (!tbody) return;
-
-        const index = tbody.rows.length;
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>
-                <input type="hidden" name="SkillModules[${index}].SkillModuleId" value="0" />
-                <input type="text" name="SkillModules[${index}].ModuleName" class="form-control" required />
-            </td>
-            <td>
-                <input type="number" min="1" name="SkillModules[${index}].Duration" class="form-control" required />
-            </td>
-            <td class="text-center">
-                <button type="button" class="btn btn-danger btn-sm removeModuleBtn">Remove</button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    }
-
-
-    document.addEventListener('click', function (e) {
-        if (e.target && e.target.classList.contains('removeModuleBtn')) {
-            const row = e.target.closest('tr');
-            if (row) {
-                row.remove();
-                reIndexTableRows();
-            }
-        }
-    });
-
-    function reIndexTableRows() {
-        const rows = document.querySelectorAll('#modulesTable tbody tr');
-        rows.forEach((row, rowIndex) => {
-            const inputs = row.querySelectorAll('input');
-            inputs.forEach(input => {
-                const currentName = input.getAttribute('name');
-                if (currentName) {
-                    const newName = currentName.replace(/\[\d+\]/, `[${rowIndex}]`);
-                    input.setAttribute('name', newName);
-                }
-            });
-        });
-    }
-</script>
+models/training-record.ts:
+export interface TrainingRecord {
+trainingRecordId:number;
+trainingName: string;
+}
+models/training.ts:
+import { TrainingRecord } from "./training-record";
+export interface Training {
+trainingId: number;
+employeeId: number;
+trainingRecordId: number;
+duration: number;
+trainingRecord: TrainingRecord;
+}
+models/training-dto.ts:
+export interface TrainingDTO {
+trainingRecordId: number;
+duration: number;
+}
+models/employee.ts:
+import { Training } from "./training";
+export interface Employee {
+employeeId: number;
+employeeName: string;
+isActive: boolean;
+joinDate: string;
+imageUrl?: string;
+imageName?: string;
+trainings:Training[],
+}
 
 
+employee.service.ts-
 
-FILE: Views/Employees/Edit.cshtml
+ng g s services/employee.service
 
-@model EmployeeViewModel
 
+employee.service.ts:
+
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { Employee } from '../models/employee';
+import { TrainingRecord } from '../models/training-record';
+import { TrainingDTO } from '../models/training-dto';
+@Injectable({ providedIn: 'root' })
+export class EmployeeService {
+private apiUrl = 'http://localhost:5188/api/Employees';
+private http = inject(HttpClient);
+getEmployees(): Observable<Employee[]> {
+return this.http.get<Employee[]>(this.apiUrl);
+}
+getEmployeeById(id: number): Observable<Employee> {
+return this.http.get<Employee>(`${this.apiUrl}/${id}`);
+}
+
+getTrainingRecords(): Observable<TrainingRecord[]> {
+return this.http.get<TrainingRecord[]>(`${this.apiUrl}/records`);
+}
+saveEmployee(
+employeeData: any,
+imageFile: File | null,
+trainings: TrainingDTO[],
+): Observable<Employee> {
+const formData = this.buildFormData(employeeData, imageFile, trainings);
+return this.http.post<Employee>(this.apiUrl, formData);
+}
+updateEmployee(
+id: number,
+employeeData: any,
+imageFile: File | null,
+trainings: TrainingDTO[],
+): Observable<void> {
+const formData = this.buildFormData(employeeData, imageFile, trainings);
+formData.append('EmployeeId', id.toString());
+return this.http.put<void>(`${this.apiUrl}/${id}`, formData);
+}
+deleteEmployee(id: number): Observable<void> {
+return this.http.delete<void>(`${this.apiUrl}/${id}`);
+}
+
+private buildFormData(data: any, imageFile: File | null, trainings: TrainingDTO[]): FormData
+{
+const formData = new FormData();
+formData.append('EmployeeName', data.employeeName);
+formData.append('IsActive', data.isActive ? 'true' : 'false');
+formData.append('JoinDate', data.joinDate);
+if (imageFile) {
+formData.append('ImageFile', imageFile);
+}
+formData.append('TrainingsString', JSON.stringify(trainings));
+return formData;
+}
+}
+
+
+
+
+employees.components.ts:
+
+
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { DatePipe, NgClass } from '@angular/common';
+import {
+FormArray,
+FormBuilder,
+FormGroup,
+ReactiveFormsModule,
+Validators,
+} from '@angular/forms';
+import { Employee } from '../../models/employee';
+import { TrainingRecord } from '../../models/training-record';
+import { TrainingDTO } from '../../models/training-dto';
+import { EmployeeService } from '../../services/employee.service';
+@Component({
+imports: [CommonModule,ReactiveFormsModule,FormsModule],
+selector: 'app-employees.components',
+styleUrl: './employees.components.css',
+templateUrl: './employees.components.html',
+})
+export class EmployeesComponets implements OnInit {
+private fb = inject(FormBuilder);
+private employeeService = inject(EmployeeService);
+employees = signal<Employee[]>([]);
+trainingRecords = signal<TrainingRecord[]>([]);
+selectedFile = signal<File | null>(null);
+imagePreview = signal<string | null>(null);
+isEditMode = signal<boolean>(false);
+editEmployeeId = signal<number | null>(null);
+employeeForm!: FormGroup;
+serverUrl = 'http://localhost:5188';
+ngOnInit(): void {
+this.initForm();
+this.loadEmployees();
+this.loadTrainingRecords();
+
+}
+get trainings(): FormArray {
+return this.employeeForm.get('trainings') as FormArray;
+}
+initForm(): void {
+this.employeeForm = this.fb.group({
+employeeName: ['', [Validators.required]],
+isActive: [true],
+joinDate: ['', [Validators.required]],
+trainings: this.fb.array([]),
+});
+}
+loadTrainingRecords(): void {
+this.employeeService.getTrainingRecords().subscribe({
+next: (data) => this.trainingRecords.set(data),
+error: (err) => console.error(err),
+});
+}
+loadEmployees(): void {
+this.employeeService.getEmployees().subscribe({
+next: (data) => this.employees.set(data),
+error: (err) => console.error(err),
+});
+}
+newTraining(trainingRecordId: number = 0, duration: number = 0): FormGroup {
+return this.fb.group({
+trainingRecordId: [trainingRecordId, [Validators.required, Validators.min(1)]],
+duration: [duration, [Validators.required, Validators.min(1)]],
+});
+}
+addTraining(trainingRecordId: number = 0, duration: number = 0): void {
+this.trainings.push(this.newTraining(trainingRecordId, duration));
+}
+removeTraining(index: number): void {
+this.trainings.removeAt(index);
+}
+editEmployee(employee: Employee): void {
+this.isEditMode.set(true);
+this.editEmployeeId.set(employee.employeeId);
+this.selectedFile.set(null);
+this.imagePreview.set(employee.imageUrl ? `${this.serverUrl}${employee.imageUrl}` : null);
+
+const joinDateFormatted = employee.joinDate ? employee.joinDate.substring(0, 10) : '';
+this.employeeForm.patchValue({
+employeeName: employee.employeeName,
+isActive: employee.isActive,
+joinDate: joinDateFormatted,
+});
+this.trainings.clear();
+employee.trainings?.forEach((t) => this.addTraining(t.trainingRecordId, t.duration));
+}
+onSubmit(): void {
+
+if (this.employeeForm.invalid) {
+this.employeeForm.markAllAsTouched();
+return;
+}
+const formValue = this.employeeForm.value;
+const trainingsData: TrainingDTO[] = formValue.trainings;
+const editId = this.editEmployeeId();
+if (this.isEditMode() && editId !== null) {
+this.employeeService
+.updateEmployee(editId, formValue, this.selectedFile(), trainingsData)
+.subscribe({
+next: () => {
+this.loadEmployees();
+this.resetForm();
+},
+error: (err) => console.error('Error in updating employee:', err),
+});
+} else {
+this.employeeService.saveEmployee(formValue, this.selectedFile(),
+trainingsData).subscribe({
+next: () => {
+this.loadEmployees();
+this.resetForm();
+},
+error: (err) => console.error('Error in saving employee:', err),
+});
+}
+}
+deleteEmployee(id: number): void {
+if (confirm('Are you sure to delete this employee')) {
+this.employeeService.deleteEmployee(id).subscribe({
+next: () => this.loadEmployees(),
+error: (err) => console.error(err),
+});
+}
+}
+resetForm(): void {
+this.isEditMode.set(false);
+this.editEmployeeId.set(null);
+this.selectedFile.set(null);
+this.imagePreview.set(null);
+this.employeeForm.reset({ isActive: true });
+this.trainings.clear();
+}
+onFileSelected(event: Event): void {
+const input = event.target as HTMLInputElement;
+const file = input.files?.[0];
+if (file) {
+this.selectedFile.set(file);
+const reader = new FileReader();
+reader.onload = () => this.imagePreview.set(reader.result as string);
+reader.readAsDataURL(file);
+}
+}
+}
+
+
+
+
+employees.components.html:
+
+<div class="container my-4">
+<div class="row">
+<div class="col-md-5 mb-4">
 <div class="card">
-    <div class="card-header bg-warning text-dark">
-        <h5 class="mb-0">Edit Employee</h5>
-    </div>
-    <div class="card-body">
-        <form id="editForm" asp-action="Edit" method="post" enctype="multipart/form-data">
-            <input type="hidden" asp-for="EmployeeId" />
-            <input type="hidden" name="OldImageUrl" value="@Model.ImageUrl" />
+<div class="card-header">
+<h5 class="mb-0">{{ isEditMode() ? 'Edit Employee' : 'Add New Employee' }}</h5>
+</div>
+<div class="card-body">
+<form [formGroup]="employeeForm" (ngSubmit)="onSubmit()">
+<div class="mb-3">
+<label class="form-label">Employee Name</label>
+<input type="text" formControlName="employeeName" class="form-control" />
+</div>
+<div class="mb-3">
+<label class="form-label">Join Date</label>
+<input type="date" formControlName="joinDate" class="form-control" />
+</div>
+<div class="form-check mb-3">
+<input class="form-check-input" type="checkbox" formControlName="isActive"
+id="isActive" />
+<label class="form-check-label" for="isActive">Is Active?</label>
+</div>
+<div class="mb-3">
+<label class="form-label">Profile File</label>
+<input (change)="onFileSelected($event)" class="form-control" type="file"
+accept="image/*" />
+@if (imagePreview()) {
+<div class="mt-2">
+<img [src]="imagePreview()" style="max-height: 100px" />
+</div>
+}
+</div>
+<div class="mb-3 bg-light">
+<div class="d-flex justify-content-between align-items-center">
+<h6>Trainings</h6>
+<button (click)="addTraining()" type="button" class="btn btn-outline-success
+btn-sm">
++ Add Training
+</button>
+</div>
+<div formArrayName="trainings">
+@for (tr of trainings.controls; track tr; let i = $index) {
+<div [formGroupName]="i" class="row align-items-center mb-2">
+<div class="col-md-6">
 
-            <div class="row">
-                <div class="col-md-7">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<select formControlName="trainingRecordId" class="form-select form-
+select-sm">
 
-                    <div class="form-group mt-2">
-                        <label asp-for="EmployeeName" class="control-label"></label>
-                        <input asp-for="EmployeeName" class="form-control" />
-                        <span asp-validation-for="EmployeeName" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="JoinDate" class="control-label"></label>
-                        <input asp-for="JoinDate" type="date" class="form-control" />
-                        <span asp-validation-for="JoinDate" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="MobileNo" class="control-label"></label>
-                        <input asp-for="MobileNo" class="form-control" />
-                        <span asp-validation-for="MobileNo" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="SkillId" class="control-label"></label>
-                        <select class="form-select" asp-for="SkillId" asp-items="@(new SelectList(Model.Skills, "SkillId", "SkillName"))">
-                            <option value="">Select Skill</option>
-                        </select>
-                        <span asp-validation-for="SkillId" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mt-2">
-                        <label asp-for="SkillBudget" class="control-label"></label>
-                        <input asp-for="SkillBudget" class="form-control" />
-                        <span asp-validation-for="SkillBudget" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group form-check mt-3">
-                        <label class="form-check-label">
-                            <input class="form-check-input" asp-for="IsActive" />
-                            @Html.DisplayNameFor(model => model.IsActive)
-                        </label>
-                    </div>
-
-                    <div class="form-group mt-3">
-                        <div class="row align-items-center">
-                            <div class="col-sm-4">
-                                <img id="imgPreview"
-                                     src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "/images/noimage.png" : "/images/" + Model.ImageUrl)"
-                                     class="img-thumbnail"
-                                     style="width: 90px; height: 90px; object-fit: cover;"
-                                     onerror="this.src='/images/noimage.png';" />
-                                <label for="img" class="form-label fw-bold d-block mt-1">Change Picture</label>
-                            </div>
-                            <div class="col-sm-8">
-                                <input style="display: none" id="img" name="ProfileFile" type="file" class="form-control" accept="image/*" onchange="showImagePreview(this)" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group mt-4">
-                        <button type="submit" class="btn btn-primary">Update</button>
-                        <a asp-action="Index" class="btn btn-dark">Cancel</a>
-                    </div>
-                </div>
-
-                <div class="col-md-5">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0">Skill Modules</h6>
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="AddModule()">+ Add Module</button>
-                    </div>
-                    <div id="ModuleTableContainer">
-                        @await Html.PartialAsync("_skillModules", Model.SkillModules ?? new List<SkillModule>())
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
+<option [ngValue]="0">Select Training</option>
+@for (r of trainingRecords(); track r.trainingRecordId) {
+<option [ngValue]="r.trainingRecordId">{{ r.trainingName }}</option>
+}
+</select>
 </div>
 
+<div class="col-md-4">
+<input type="number" formControlName="duration" class="form-control" />
+</div>
 
-FILE: Migrations/20260903044605_insert.cs
+<div class="col-md-2">
 
-using Microsoft.EntityFrameworkCore.Migrations;
+<button (click)="removeTraining(i)" type="button" class="btn btn-outline-
+danger btn-sm">
 
-#nullable disable
-
-namespace ASP_Net_Core_CRUD_Evd.Migrations
-{
-    public partial class insertemp : Migration
-    {
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(@"
-                IF NOT EXISTS (SELECT * FROM sys.types WHERE name = 'ParamModuleType')
-                BEGIN
-                    CREATE TYPE dbo.ParamModuleType AS TABLE
-                    (
-                        ModuleName VARCHAR(50),
-                        Duration   INT
-                    );
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE OR ALTER PROC dbo.InsertEmployeeSP
-                    @EmployeeName VARCHAR(50),
-                    @JoinDate     DATETIME,
-                    @MobileNo     VARCHAR(11),
-                    @IsActive     BIT,
-                    @SkillId      INT,
-                    @ImageUrl     VARCHAR(100),
-                    @SkillBudget  DECIMAL(18,2),
-                    @SkillModules dbo.ParamModuleType READONLY
-                AS
-                BEGIN
-                    SET NOCOUNT ON;
-                    BEGIN TRY
-                        DECLARE @EmployeeId INT;
-
-                        INSERT INTO dbo.Employees (EmployeeName, JoinDate, MobileNo, IsActive, SkillId, ImageUrl, SkillBudget)
-                        VALUES (@EmployeeName, @JoinDate, @MobileNo, @IsActive, @SkillId, @ImageUrl, @SkillBudget);
-
-                        SET @EmployeeId = SCOPE_IDENTITY();
-
-                        INSERT INTO dbo.SkillModules (ModuleName, Duration, EmployeeId)
-                        SELECT ModuleName, Duration, @EmployeeId
-                        FROM @SkillModules;
-                    END TRY
-                    BEGIN CATCH
-                        THROW;
-                    END CATCH
-                END
-            ");
-        }
-
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(@"DROP PROC IF EXISTS dbo.InsertEmployeeSP;");
-            migrationBuilder.Sql(@"DROP TYPE IF EXISTS dbo.ParamModuleType;");
-        }
-    }
+&times;
+</button>
+</div>
+</div>
 }
+</div>
+</div>
+<div class="d-flex gap-2">
+<button type="submit" class="btn btn-outline-success">
+{{ isEditMode() ? 'Update' : 'Save' }}
+</button>
+<button type="button" class="btn btn-outline-danger"
+(click)="resetForm()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<div class="col-md-7 mb-4">
+<div class="card">
+<div class="card-header">
+<h4 class="mb-0">Employee List</h4>
+</div>
+<div class="card-body p-0">
+<table class="table table-bordered">
+<thead>
+<tr>
+<th>Image</th>
+<th>Name</th>
+<th>Status</th>
+<th>Join Date</th>
+<th>Trainings</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+@for (emp of employees(); track emp.employeeId) {
+<tr>
+<td>
+<img
+[src]="emp.imageUrl ? serverUrl + emp.imageUrl : 'images/noimage.png'"
+
+style="width: 45px; height: 45px; object-fit: cover"
+
+/>
+</td>
+
+<td>{{ emp.employeeName }}</td>
+
+<td>
+
+<span class="badge" [ngClass]="emp.isActive ? 'bg-success' : 'bg-
+secondary'">
+
+{{ emp.isActive ? 'Active' : 'Inactive' }}
+</span>
+</td>
+
+<td>{{ emp.joinDate | date: 'yyyy-MM-dd' }}</td>
+
+<td>
+<ul class="list-unstyled mb-0 small">
+@for (t of emp.trainings; track t.trainingId) {
+<li>{{ t.trainingRecord?.trainingName }}: {{ t.duration }} hrs</li>
+}
+
+</ul>
+</td>
+<td>
+
+<button (click)="editEmployee(emp)" type="button" class="btn btn-outline-
+primary btn-sm">
+
+Edit
+</button>
+
+<button (click)="deleteEmployee(emp.employeeId)" type="button" class="btn
+
+btn-outline-danger btn-sm">
+Delete
+</button>
+</td>
+</tr>
+}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
     </textarea>
 
 
